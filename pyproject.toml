@@ -4,4 +4,12 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "db>=0.1.1",
+    "dotenv>=0.9.9",
+    "flask>=3.1.2",
+    "flask-login>=0.6.3",
+    "gunicorn>=23.0.0",
+    "oauthlib>=3.3.1",
+    "requests-oauthlib>=2.0.0",
+]
