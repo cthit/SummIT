@@ -3,9 +3,6 @@ from urllib.parse import urlencode
 import secrets
 import requests
 import os
-#from . import db
-
-app_secret=''
 
 client_id=os.getenv('GAMMA_CLIENT_ID', '')
 client_secret=os.getenv('GAMMA_CLIENT_SECRET', '')
@@ -57,12 +54,6 @@ def callback():
     
     code = args_dict['code']
     return code
-
-
-
-# @auth.route('/signup')
-# def signup():
-#     return 'Signup'
 
 @auth.route('/logout')
 def logout():

@@ -1,18 +1,12 @@
 from flask import Flask
 from dotenv import load_dotenv
-#from flask_sqlalchemy import SQLAlchemy
-
-# init SQLAlchemy so we can use it later in our models
-#db = SQLAlchemy()
+import os
 
 def create_app():
     load_dotenv()
     app = Flask(__name__)
 
-    app.config['SECRET_KEY'] = 'secret-key-goes-here'
-    #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-
-    # db.init_app(app)
+    app.config['SECRET_KEY'] = os.getenv('APP_SECRET_KEY', '')
 
     # blueprint for auth routes in our app
     from .auth import auth as auth_blueprint
