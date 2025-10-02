@@ -36,21 +36,21 @@ def callback():
     # Get the access token from the callback
     token = gamma.authorize_access_token()
     
-    # Get user info using a simple GET request with the full URL
-    user_info_response = gamma.get('/oauth2/userinfo', token=token)
-    user_info = user_info_response.json()
+    # Try to get user info
+    try:
+        user_info_response = gamma.get('/oauth2/userinfo', token=token)
+        user_info = user_info_response.json()
+    except Exception as e:
+        print(f"UserInfo API Exception: {e}")
+        # Fallback to basic info from token
+        user_info = {
+            'message': 'UserInfo unavailable',
+            'scopes': token.get('scope', 'N/A')
+        }
     
     # Store user info in session
     session['user'] = user_info
     session['token'] = token
-    
-    # Debug output to see what we're getting
-    print("=== TOKEN INFO ===")
-    print(f"Token type: {token.get('token_type', 'N/A')}")
-    print(f"Access token: {token.get('access_token', 'N/A')[:50]}...")
-    print(f"Scope: {token.get('scope', 'N/A')}")
-    print("\n=== USER INFO ===")
-    print(user_info)
     
     return redirect(url_for('main.index'))
 

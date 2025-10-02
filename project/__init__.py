@@ -9,6 +9,7 @@ def create_app():
     GAMMA_ROOT = 'https://auth.chalmers.it'
     auth_uri = f'{GAMMA_ROOT}/oauth2/authorize'
     token_uri = f'{GAMMA_ROOT}/oauth2/token'
+    jwks_uri = f'{GAMMA_ROOT}/oauth2/jwks'
     user_info_uri = f'{GAMMA_ROOT}/oauth2/userinfo'
     redirect_uri = 'http://127.0.0.1:5000/api/auth/callbacks/gamma'
     client_id = os.getenv('GAMMA_CLIENT_ID', '')
@@ -22,7 +23,7 @@ def create_app():
     # Initialize OAuth with the Flask app
     oauth = OAuth(app)
 
-    # Register Gamma OAuth client for OAuth2 (disable OpenID Connect)
+    # Register Gamma OAuth client with proper JWKS URI
     oauth.register(
         name='gamma',
         client_id=client_id,
@@ -31,8 +32,11 @@ def create_app():
         authorize_url=auth_uri,
         api_base_url=GAMMA_ROOT,
         client_kwargs={
-            'scope': 'openid profile email',  # Keep working scopes
+            'scope': 'openid email profile',  # Required scopes for Gamma
         },
+        # Provide JWKS URI for JWT validation
+        jwks_uri=jwks_uri,
+        server_metadata_url=None,  # Disable auto-discovery
     )
 
     # blueprint for auth routes in our app
