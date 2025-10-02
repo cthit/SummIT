@@ -2,6 +2,28 @@
 
 {% block content %}
 <h1 class="title">
-  Welcome, digIT!
+  Welcome, {{ user.name if user else 'digIT' }}!
 </h1>
+
+{% if user %}
+<div class="content">
+  <h2>Profile Information</h2>
+  <p><strong>User ID:</strong> {{ user.sub }}</p>
+  <p><strong>Name:</strong> {{ user.name }}</p>
+  <p><strong>Email:</strong> {{ user.email }}</p>
+  {% if user.nick %}
+  <p><strong>Nickname:</strong> {{ user.nick }}</p>
+  {% endif %}
+  {% if user.cid %}
+  <p><strong>CID:</strong> {{ user.cid }}</p>
+  {% endif %}
+  
+  <a class="button is-light" href="{{ url_for('auth.logout') }}">Logout</a>
+</div>
+{% else %}
+<div class="content">
+  <p>You are not logged in.</p>
+  <a class="button is-primary" href="{{ url_for('auth.login') }}">Login</a>
+</div>
+{% endif %}
 {% endblock %}
