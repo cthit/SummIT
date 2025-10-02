@@ -31,8 +31,7 @@ def create_app():
         authorize_url=auth_uri,
         api_base_url=GAMMA_ROOT,
         client_kwargs={
-            # 'scope': 'user:read',  # Try without scope first
-            'redirect_uri': redirect_uri
+            'scope': 'openid profile email',  # Keep working scopes
         },
     )
 

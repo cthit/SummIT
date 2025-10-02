@@ -44,7 +44,13 @@ def callback():
     session['user'] = user_info
     session['token'] = token
     
-    print(token)
+    # Debug output to see what we're getting
+    print("=== TOKEN INFO ===")
+    print(f"Token type: {token.get('token_type', 'N/A')}")
+    print(f"Access token: {token.get('access_token', 'N/A')[:50]}...")
+    print(f"Scope: {token.get('scope', 'N/A')}")
+    print("\n=== USER INFO ===")
+    print(user_info)
     
     return redirect(url_for('main.index'))
 
