@@ -40,6 +40,8 @@ def callback():
     try:
         user_info_response = gamma.get('/oauth2/userinfo', token=token)
         user_info = user_info_response.json()
+        print("=== USER INFO FROM GAMMA ===")
+        print(f"User info: {user_info}")
     except Exception as e:
         print(f"UserInfo API Exception: {e}")
         # Fallback to basic info from token
@@ -48,14 +50,33 @@ def callback():
             'scopes': token.get('scope', 'N/A')
         }
     
-    # Store user info in session
-    session['user'] = user_info
-    session['token'] = token
+    # Add token scope info to user data for display
+    if 'scope' not in user_info and token.get('scope'):
+        user_info['scopes'] = token.get('scope')
     
-    return redirect(url_for('main.index'))
+    # Store only the most essential user info in session (reduce session size)
+    essential_user_info = {
+        'sub': user_info.get('sub'),
+        'name': user_info.get('name'),
+        'email': user_info.get('email'),
+        'cid': user_info.get('cid')
+    }
+    
+    # Store user info in session
+    session['user'] = essential_user_info
+    # Don't store the full token to save space
+    session['authenticated'] = True
+    
+    print("=== SESSION DATA ===")
+    print(f"User data stored in session: {essential_user_info}")
+    print(f"Token scopes: {token.get('scope', 'N/A')}")
+    print(f"Full user info: {user_info}")
+    
+    return redirect(url_for('main.profile'))
 
 
 @auth.route('/logout')
 def logout():
-    session.clear()
-    return render_template('logout.html')
+    session.pop('user', None)
+    session.pop('authenticated', None)
+    return redirect(url_for('main.index'))
