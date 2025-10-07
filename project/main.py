@@ -1,16 +1,16 @@
-from flask import Blueprint, render_template, session, redirect, url_for
+from flask import Blueprint, render_template, g
 
-main = Blueprint('main', __name__)
+from .auth import login_required
+
+main = Blueprint("main", __name__)
 
 
-@main.route('/')
+@main.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
 
-@main.route('/profile')
+@main.route("/profile")
+@login_required
 def profile():
-    user = session.get('user')
-    if not user:
-        return redirect(url_for('auth.login'))
-    return render_template('profile.html', user=user)
+    return render_template("profile.html", user=g.get("user"))

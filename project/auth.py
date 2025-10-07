@@ -1,82 +1,100 @@
-from flask import (Blueprint, render_template, redirect, url_for, session,
-                   request, jsonify, current_app)
+from flask import (
+    Blueprint,
+    render_template,
+    redirect,
+    url_for,
+    session,
+    current_app,
+    g,
+)
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 import os
+from functools import wraps
+
 
 # Allow HTTP for local development (required for OAuth2Session)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 load_dotenv()
 
-# Get redirect URI for OAuth callbacks
-redirect_uri = 'http://127.0.0.1:5000/api/auth/callbacks/gamma'
 
-auth = Blueprint('auth', __name__)
+auth = Blueprint("auth", __name__)
 
 
-@auth.route('/login')
+def get_gamma():
+    oauth: OAuth = current_app.extensions["authlib.integrations.flask_client"]
+    return oauth.gamma
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("authenticated"):
+            return redirect(url_for("auth.login"))
+        g.user = session.get("user")
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+@auth.route("/login")
 def login():
-    return render_template('login.html')
+    if session.get("authenticated"):
+        return redirect(url_for("main.profile"))
+    return render_template("login.html")
 
 
-@auth.route('/authorize')
+@auth.route("/authorize")
 def authorize():
-    oauth = current_app.extensions['authlib.integrations.flask_client']
-    gamma = oauth.gamma
-    
-    return gamma.authorize_redirect(redirect_uri)
+    gamma = get_gamma()
+    return gamma.authorize_redirect(url_for("auth.callback", _external=True))
 
 
-@auth.route('/api/auth/callbacks/gamma')
+@auth.route("/api/auth/callbacks/gamma")
 def callback():
-    oauth = current_app.extensions['authlib.integrations.flask_client']
-    gamma = oauth.gamma
-    
-    # Get the access token from the callback
+    gamma = get_gamma()
+
     token = gamma.authorize_access_token()
-    
-    # Try to get user info
+
     try:
-        user_info_response = gamma.get('/oauth2/userinfo', token=token)
+        user_info_response = gamma.get("/oauth2/userinfo", token=token)
         user_info = user_info_response.json()
-        print("=== USER INFO FROM GAMMA ===")
-        print(f"User info: {user_info}")
     except Exception as e:
-        print(f"UserInfo API Exception: {e}")
-        # Fallback to basic info from token
         user_info = {
-            'message': 'UserInfo unavailable',
-            'scopes': token.get('scope', 'N/A')
+            "message": "UserInfo unavailable",
+            "scopes": token.get("scope", "N/A"),
         }
-    
-    # Add token scope info to user data for display
-    if 'scope' not in user_info and token.get('scope'):
-        user_info['scopes'] = token.get('scope')
-    
-    # Store only the most essential user info in session (reduce session size)
+
+    if "scope" not in user_info and token.get("scope"):
+        user_info["scopes"] = token.get("scope")
+
     essential_user_info = {
-        'sub': user_info.get('sub'),
-        'name': user_info.get('name'),
-        'email': user_info.get('email'),
-        'cid': user_info.get('cid')
+        "sub": user_info.get("sub"),
+        "name": user_info.get("name"),
+        "email": user_info.get("email"),
+        "cid": user_info.get("cid"),
     }
-    
+
     # Store user info in session
-    session['user'] = essential_user_info
+    session["user"] = essential_user_info
     # Don't store the full token to save space
-    session['authenticated'] = True
-    
-    print("=== SESSION DATA ===")
-    print(f"User data stored in session: {essential_user_info}")
-    print(f"Token scopes: {token.get('scope', 'N/A')}")
-    print(f"Full user info: {user_info}")
-    
-    return redirect(url_for('main.profile'))
+    session["authenticated"] = True
+
+    return redirect(url_for("main.profile"))
 
 
-@auth.route('/logout')
+def clear_auth_session():
+    """
+    Clear authentication-related session data.
+
+    `user` and `authenticated` keys are removed from the session.
+    """
+    session.pop("user", None)
+    session.pop("authenticated", None)
+
+
+@auth.route("/logout")
 def logout():
-    session.pop('user', None)
-    session.pop('authenticated', None)
-    return redirect(url_for('main.index'))
+    clear_auth_session()
+    return redirect(url_for("main.index"))
