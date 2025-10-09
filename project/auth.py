@@ -87,12 +87,32 @@ def callback():
         active_groups = [
             {
                 "prettyName": group.get("prettyName", {}),
-                "name": group.get("name", {}),
+                "name": group.get("superGroup", {}).get("name"),
                 "post": group.get("post", {}).get("enName"),
             }
             for group in groups_response
             if group.get("superGroup", {}).get("type") != "alumni"
         ]
+# {
+#     "id": "ab44f720-8ed9-48b4-ba2a-6fb2a03db8f6",
+#     "name": "digit25",
+#     "prettyName": "digIT 25",
+#     "superGroup": {
+#         "id": "dea3493e-66e4-44b2-a657-cb57a6840dab",
+#         "name": "digit",
+#         "prettyName": "digIT",
+#         "type": "committee",
+#         "svDescription": "Digitala system",
+#         "enDescription": "Digital systems"
+#     },
+#     "post": {
+#         "id": "2cf9773d-da45-4532-8203-b085baaaf413",
+#         "version": 30,
+#         "svName": "Vice Ordförande",
+#         "enName": "Vice Chairman"
+#     }
+# }
+
     except Exception as e:
         print(f"Failed to get api information: {e}")
         active_groups = "N/A"
@@ -121,8 +141,8 @@ def callback():
         "email": user_info.get("email"),
         "cid": user_info.get("cid"),
         "groups": active_groups + extra_groups,
-        "active_groups": active_groups,
-        "extra_groups": extra_groups,
+        # "active_groups": active_groups,
+        # "extra_groups": extra_groups,
     }
 
     # Store user info in session

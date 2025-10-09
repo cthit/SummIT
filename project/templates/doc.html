@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="title">
+  This is the documents page!
+</h1>
+<div style="text-align: center;">
+  <h2 style="display: inline;">Choose meeting:</h2>
+  <select id="meetingSelect" onchange="updateContent()" style="margin-left: 10px;">
+    <option value="">Select a meeting...</option>
+    {% for meeting in meetings %}
+    <option value="{{ meeting }}">{{ meeting }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="content" id="documentsContent" style="display: none;">
+    <div id="selectedMeeting" class="notification is-info" style="margin-bottom: 2rem;">
+        <strong>Selected Meeting: </strong><span id="meetingDisplay"></span>
+    </div>
+
+    {% if user_roles %}
+        {% for group_name, post in user_roles %}
+        <div class="box" style="margin-bottom: 2rem;">
+          <h2>
+            <strong>{{ group_name.title() }}</strong> 
+          </h2>
+          
+          <div class="columns">
+            <div class="column is-half">
+              <div class="card">
+                <div class="card-content">
+                    <h2>This is a Plan for <span class="meeting-text"></span></h2>
+                </div>
+              </div>
+            </div>
+            
+            <div class="column is-half">
+              <div class="card">
+                <div class="card-content">
+                  <h2>This is a budget for <span class="meeting-text"></span></h2>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+    <div class="box" style="margin-bottom: 2rem;">
+        <h2>
+        <strong>General Documents</strong> 
+        </h2>
+        <div class="columns">
+            <div class="card">
+                <div class="card-content">
+                    <h2>This is the agenda for <span class="meeting-text"></span></h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-content">
+                    <h2>This is motion #1 for <span class="meeting-text"></span></h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-content">
+                    <h2>This is motion #2 for <span class="meeting-text"></span></h2>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-content">
+                    <h2>This is motion #3 for <span class="meeting-text"></span></h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateContent() {
+  const select = document.getElementById('meetingSelect');
+  const content = document.getElementById('documentsContent');
+  const meetingDisplay = document.getElementById('meetingDisplay');
+  const meetingTexts = document.querySelectorAll('.meeting-text');
+  
+  if (select.value) {
+    content.style.display = 'block';
+    meetingDisplay.textContent = select.value;
+    meetingTexts.forEach(span => {
+      span.textContent = select.value;
+    });
+  } else {
+    content.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}
