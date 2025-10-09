@@ -8,15 +8,21 @@ from flask import (
     g,
 )
 from authlib.integrations.flask_client import OAuth
+from functools import wraps
 from dotenv import load_dotenv
 import os
-from functools import wraps
+import requests
 
 
 # Allow HTTP for local development (required for OAuth2Session)
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 load_dotenv()
+gamma_root = os.getenv("GAMMA_ROOT", "https://auth.chalmers.it")
+auth_header = os.getenv("AUTH_HEADER", "")
+client_api_root = f"{gamma_root}/api/client/v1"
+client_api_groups = f"{client_api_root}/groups"
+client_api_groups_for = f"{client_api_groups}/for"
 
 
 auth = Blueprint("auth", __name__)
@@ -62,18 +68,37 @@ def callback():
         user_info = user_info_response.json()
     except Exception as e:
         user_info = {
-            "message": "UserInfo unavailable",
+            "message": f"UserInfo unavailable: {e}",
             "scopes": token.get("scope", "N/A"),
         }
 
     if "scope" not in user_info and token.get("scope"):
         user_info["scopes"] = token.get("scope")
 
+    try:
+        id = user_info.get("sub")
+        r = requests.Session()
+        r.headers.update({"Authorization": auth_header})
+        groups_json = r.get(F"{client_api_groups_for}/{id}").json()
+
+        # Filter groups to only include committees
+        active_groups = [
+            {
+                "name": group.get("prettyName", {}),
+                "post": group.get("post", {}).get("enName"),
+            }
+            for group in groups_json
+            if group.get("superGroup", {}).get("type") != "alumni"
+        ]
+    except Exception as e:
+        print(f"Failed to get api information: {e}")
+        active_groups = "No data."
+
     essential_user_info = {
-        "sub": user_info.get("sub"),
         "name": user_info.get("name"),
         "email": user_info.get("email"),
         "cid": user_info.get("cid"),
+        "groups": active_groups,
     }
 
     # Store user info in session
