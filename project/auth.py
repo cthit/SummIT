@@ -79,7 +79,7 @@ def callback():
         id = user_info.get("sub")
         r = requests.Session()
         r.headers.update({"Authorization": auth_header})
-        groups_json = r.get(F"{client_api_groups_for}/{id}").json()
+        groups_response = r.get(F"{client_api_groups_for}/{id}").json()
 
         # Filter groups to only include committees
         active_groups = [
@@ -87,7 +87,7 @@ def callback():
                 "name": group.get("prettyName", {}),
                 "post": group.get("post", {}).get("enName"),
             }
-            for group in groups_json
+            for group in groups_response
             if group.get("superGroup", {}).get("type") != "alumni"
         ]
     except Exception as e:
