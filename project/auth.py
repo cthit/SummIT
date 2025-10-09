@@ -6,6 +6,7 @@ from flask import (
     session,
     current_app,
     g,
+    request
 )
 from authlib.integrations.flask_client import OAuth
 from functools import wraps
@@ -54,6 +55,7 @@ def login():
 @auth.route("/authorize")
 def authorize():
     gamma = get_gamma()
+    session['selected_extra_groups'] = request.args.getlist("extra_groups")
     return gamma.authorize_redirect(url_for("auth.callback", _external=True))
 
 
@@ -84,7 +86,8 @@ def callback():
         # Filter groups to only include committees
         active_groups = [
             {
-                "name": group.get("prettyName", {}),
+                "prettyName": group.get("prettyName", {}),
+                "name": group.get("name", {}),
                 "post": group.get("post", {}).get("enName"),
             }
             for group in groups_response
@@ -92,13 +95,34 @@ def callback():
         ]
     except Exception as e:
         print(f"Failed to get api information: {e}")
-        active_groups = "No data."
+        active_groups = "N/A"
+
+    extra_groups = [
+        {
+            "name": "devit",
+            "post": "Chairman",
+        }
+        if args == 'devit_ordf'
+        else {
+            "name": "devit",
+            "post": "Treasurer",
+        }
+        if args == 'devit_kass'
+        else {
+            "name": args,
+            "post": "Member",
+        }
+        for args in session['selected_extra_groups']
+    ]
+    session.pop("selected_extra_groups", None)
 
     essential_user_info = {
         "name": user_info.get("name"),
         "email": user_info.get("email"),
         "cid": user_info.get("cid"),
-        "groups": active_groups,
+        "groups": active_groups + extra_groups,
+        "active_groups": active_groups,
+        "extra_groups": extra_groups,
     }
 
     # Store user info in session

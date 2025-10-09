@@ -32,9 +32,9 @@
 
     <!-- Active Groups -->
   {% if user.groups %}
-  <p><strong>Active Groups:</strong>
+  <p><strong>Groups:</strong>
     {% for group in user.groups %}
-      {{ group.name }}{% if group.post %} ({{ group.post }}){% endif %}{% if not loop.last %}, {% endif %}
+      {{ group.prettyName or group.name }}{% if group.post %} ({{ group.post }}){% endif %}{% if not loop.last %}, {% endif %}
     {% endfor %}
   </p>
   {% endif %}

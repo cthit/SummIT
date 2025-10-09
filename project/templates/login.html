@@ -4,7 +4,47 @@
 <div class="column is-4 is-offset-4">
     <h3 class="title">Login</h3>
     <div class="box">
-        <a href="{{ url_for('auth.authorize') }}" class="button is-block is-info is-large is-fullwidth">Login</a>
+        <form action="{{ url_for('auth.authorize') }}" method="GET">
+            <div class="field">
+                <label class="label">Select Extra Access Groups:</label>
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox" name="extra_groups" value="digit">
+                        digIT
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox" name="extra_groups" value="styrit">
+                        styrIT
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox" name="extra_groups" value="motespresidit">
+                        MötespresidIT
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox" name="extra_groups" value="devit_ordf">
+                        DevIT Ordf
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox">
+                        <input type="checkbox" name="extra_groups" value="devit_kass">
+                        DevIT Kassör
+                    </label>
+                </div>
+            </div>
+            
+            <div class="field" style="margin-top: 1.5rem;">
+                <div class="control">
+                    <button type="submit" class="button is-block is-info is-large is-fullwidth">Login</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
