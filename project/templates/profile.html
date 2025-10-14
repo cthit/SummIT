@@ -1,41 +1,33 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <h1 class="title">
-  Welcome, {{ user.name if user and user.name else (user.email if user and user.email else 'digIT User') }}!
+  Welcome, {{ user.name if user and user.name else (user.email if user and
+  user.email else 'digIT User') }}!
 </h1>
 
 {% if user %}
 <div class="content">
   <h2>Profile Information</h2>
-  
+
   <!-- Basic user info -->
   {% if user.sub %}
   <p><strong>User ID:</strong> {{ user.sub }}</p>
-  {% endif %}
-  
-  {% if user.name %}
+  {% endif %} {% if user.name %}
   <p><strong>Name:</strong> {{ user.name }}</p>
-  {% endif %}
-  
-  {% if user.email %}
+  {% endif %} {% if user.email %}
   <p><strong>Email:</strong> {{ user.email }}</p>
-  {% endif %}
-  
-  {% if user.nick %}
+  {% endif %} {% if user.nick %}
   <p><strong>Nickname:</strong> {{ user.nick }}</p>
-  {% endif %}
-  
-  {% if user.cid %}
+  {% endif %} {% if user.cid %}
   <p><strong>CID:</strong> {{ user.cid }}</p>
   {% endif %}
 
-    <!-- Active Groups -->
+  <!-- Active Groups -->
   {% if user.groups %}
-  <p><strong>Groups:</strong>
-    {% for group in user.groups %}
-      {{ group.prettyName or group.name }}{% if group.post %} ({{ group.post }}){% endif %}{% if not loop.last %}, {% endif %}
-    {% endfor %}
+  <p>
+    <strong>Groups:</strong>
+    {% for group in user.groups %} {{ group.prettyName or group.name }}{% if
+    group.post %} ({{ group.post }}){% endif %}{% if not loop.last %}, {% endif
+    %} {% endfor %}
   </p>
   {% endif %}
 
@@ -45,13 +37,22 @@
   {% endif %}
 
   <!-- Debug: Show all available user data -->
-  <details style="margin-top: 2rem;">
+  <details style="margin-top: 2rem">
     <summary><strong>Raw User Data (Debug)</strong></summary>
-    <pre style="background: #f5f5f5; padding: 1rem; margin-top: 1rem; white-space: pre-wrap;">{{ user | tojson(indent=2) }}</pre>
+    <pre
+      style="
+        background: #f5f5f5;
+        padding: 1rem;
+        margin-top: 1rem;
+        white-space: pre-wrap;
+      "
+    >
+{{ user | tojson(indent=2) }}</pre
+    >
   </details>
 
   <!-- Logout button -->
-  <div style="margin-top: 2rem;">
+  <div style="margin-top: 2rem">
     <a class="button is-light" href="{{ url_for('auth.logout') }}">Logout</a>
   </div>
 </div>
@@ -60,5 +61,4 @@
   <p>You are not logged in.</p>
   <a class="button is-primary" href="{{ url_for('auth.login') }}">Login</a>
 </div>
-{% endif %}
-{% endblock %}
+{% endif %} {% endblock %}
