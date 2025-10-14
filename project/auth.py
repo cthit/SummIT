@@ -6,7 +6,7 @@ from flask import (
     session,
     current_app,
     g,
-    request
+    request,
 )
 from authlib.integrations.flask_client import OAuth
 from functools import wraps
@@ -14,11 +14,17 @@ from dotenv import load_dotenv
 import os
 import requests
 
+load_dotenv()
+
+
+def devmode_active():
+    return os.getenv("DEV_ENV", "False").lower() in ("true", "1", "t")
+
 
 # Allow HTTP for local development (required for OAuth2Session)
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+if devmode_active():
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-load_dotenv()
 gamma_root = os.getenv("GAMMA_ROOT", "https://auth.chalmers.it")
 auth_header = os.getenv("AUTH_HEADER", "")
 client_api_root = f"{gamma_root}/api/client/v1"
@@ -34,12 +40,37 @@ def get_gamma():
     return oauth.gamma
 
 
+def is_authenticated():
+    return session.get("authenticated", False)
+
+
+def set_user_in_g():
+    g.user = session.get("user")
+
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get("authenticated"):
+        if not is_authenticated():
             return redirect(url_for("auth.login"))
-        g.user = session.get("user")
+        set_user_in_g()
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def is_admin():
+    user = session.get("user", {})
+    user_groups = [group.get("name", "") for group in user.get("groups", [])]
+    return any(group in user_groups for group in ["motespresidit", "styrit"])
+
+
+def login_as_admin_required(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not is_admin():
+            return render_template("denied.html"), 401
         return f(*args, **kwargs)
 
     return decorated_function
@@ -55,7 +86,8 @@ def login():
 @auth.route("/authorize")
 def authorize():
     gamma = get_gamma()
-    session['selected_extra_groups'] = request.args.getlist("extra_groups")
+    if devmode_active():
+        session["selected_extra_groups"] = request.args.getlist("extra_groups")
     return gamma.authorize_redirect(url_for("auth.callback", _external=True))
 
 
@@ -81,7 +113,7 @@ def callback():
         id = user_info.get("sub")
         r = requests.Session()
         r.headers.update({"Authorization": auth_header})
-        groups_response = r.get(F"{client_api_groups_for}/{id}").json()
+        groups_response = r.get(f"{client_api_groups_for}/{id}").json()
 
         # Filter groups to only include committees
         active_groups = [
@@ -93,46 +125,50 @@ def callback():
             for group in groups_response
             if group.get("superGroup", {}).get("type") != "alumni"
         ]
-# {
-#     "id": "ab44f720-8ed9-48b4-ba2a-6fb2a03db8f6",
-#     "name": "digit25",
-#     "prettyName": "digIT 25",
-#     "superGroup": {
-#         "id": "dea3493e-66e4-44b2-a657-cb57a6840dab",
-#         "name": "digit",
-#         "prettyName": "digIT",
-#         "type": "committee",
-#         "svDescription": "Digitala system",
-#         "enDescription": "Digital systems"
-#     },
-#     "post": {
-#         "id": "2cf9773d-da45-4532-8203-b085baaaf413",
-#         "version": 30,
-#         "svName": "Vice Ordförande",
-#         "enName": "Vice Chairman"
-#     }
-# }
+    # {
+    #     "id": "ab44f720-8ed9-48b4-ba2a-6fb2a03db8f6",
+    #     "name": "digit25",
+    #     "prettyName": "digIT 25",
+    #     "superGroup": {
+    #         "id": "dea3493e-66e4-44b2-a657-cb57a6840dab",
+    #         "name": "digit",
+    #         "prettyName": "digIT",
+    #         "type": "committee",
+    #         "svDescription": "Digitala system",
+    #         "enDescription": "Digital systems"
+    #     },
+    #     "post": {
+    #         "id": "2cf9773d-da45-4532-8203-b085baaaf413",
+    #         "version": 30,
+    #         "svName": "Vice Ordförande",
+    #         "enName": "Vice Chairman"
+    #     }
+    # }
 
     except Exception as e:
         print(f"Failed to get api information: {e}")
-        active_groups = "N/A"
+        active_groups = []
 
     extra_groups = [
-        {
-            "name": "devit",
-            "post": "Chairman",
-        }
-        if args == 'devit_ordf'
-        else {
-            "name": "devit",
-            "post": "Treasurer",
-        }
-        if args == 'devit_kass'
-        else {
-            "name": args,
-            "post": "Member",
-        }
-        for args in session['selected_extra_groups']
+        (
+            {
+                "name": "devit",
+                "post": "Chairman",
+            }
+            if args == "devit_ordf"
+            else (
+                {
+                    "name": "devit",
+                    "post": "Treasurer",
+                }
+                if args == "devit_kass"
+                else {
+                    "name": args,
+                    "post": "Member",
+                }
+            )
+        )
+        for args in session.get("selected_extra_groups", [])
     ]
     session.pop("selected_extra_groups", None)
 
@@ -149,6 +185,7 @@ def callback():
     session["user"] = essential_user_info
     # Don't store the full token to save space
     session["authenticated"] = True
+    session["admin"] = is_admin()
 
     return redirect(url_for("main.profile"))
 

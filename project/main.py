@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, g
 
-from .auth import login_required
+from .auth import login_required, login_as_admin_required
 
 main = Blueprint("main", __name__)
 
@@ -27,21 +27,12 @@ def doc():
         for group in user.get("groups", [])
         if group.get("post", "") in ["Chairman", "Treasurer"]
     ]
-    return render_template("doc.html",
-                           user=user,
-                           user_roles=user_roles,
-                           meetings=meetings)
+    return render_template(
+        "doc.html", user=user, user_roles=user_roles, meetings=meetings
+    )
 
 
 @main.route("/admin")
-@login_required
+@login_as_admin_required
 def admin():
-    user = g.get("user")
-    user_groups = [
-        group.get("name", "")
-        for group in user.get("groups", [])
-    ]
-    if any(group in user_groups for group in ["motespresidit", "styrit"]):
-        return render_template("admin.html", user=g.get("user"))
-    else:
-        return render_template("denied.html")
+    return render_template("admin.html")
