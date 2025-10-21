@@ -2,6 +2,7 @@ services:
   summit_web:
     build: .
     ports:
-      - "3000:3000"
+      - "5000:5000"
     env_file:
       - .env
+    command: ["uv", "run", "gunicorn", "--workers", "3", "--bind", "0.0.0.0:5000", "wsgi:app"]
