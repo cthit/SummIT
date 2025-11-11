@@ -1,0 +1,13 @@
+@startchen data_base_diagram
+
+entity "Document" as Doc {
+    document_name : STRING
+    file_path : STRING
+}
+
+entity "Läsperiod" as StudyPeriod {
+    year : INT
+    period : INT
+}
+
+@endchen
