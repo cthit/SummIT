@@ -10,4 +10,9 @@ entity "Läsperiod" as StudyPeriod {
     period : INT
 }
 
+entity "Meeting" as Meeting {
+    id : uuid
+    date : timestamp
+}
+
 @endchen
