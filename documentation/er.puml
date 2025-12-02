@@ -1,9 +1,46 @@
 @startchen data_base_diagram
+left to right direction
 
 entity "Document" as Doc {
     document_name : STRING
     file_path : STRING
 }
+
+entity "Division Document" as DivisionDoc {
+
+}
+
+entity "Division Document Type" as DivisionDocType {
+
+}
+
+entity "Meeting Document" as MeetingDoc {
+
+}
+
+entity "Meeting Document Type" as MeetingDocType {
+
+}
+
+entity "Committe" as Committe {
+    id : groupId
+}
+
+entity "Member" as Member {
+    id : userID
+}
+
+entity "Document Owner" as DocOwner{
+
+}
+
+relationship "Owns" as DocOwnerOwnsDoc {
+
+}
+
+DocOwner -n- DocOwnerOwnsDoc
+DocOwnerOwnsDoc =1= Doc
+DocOwner =>= d {Committe, Member}
 
 entity "Läsperiod" as StudyPeriod {
     year : INT
@@ -14,5 +51,41 @@ entity "Meeting" as Meeting {
     id : uuid
     date : timestamp
 }
+
+relationship "Has" as StudyPeriodHasMeeting {
+}
+
+Meeting =N= StudyPeriodHasMeeting
+StudyPeriodHasMeeting -1- StudyPeriod
+
+Doc =>= d {DivisionDoc, MeetingDoc}
+
+relationship "Has" as StudyPeriodHasDivisionDoc {
+
+}
+
+StudyPeriod -1- StudyPeriodHasDivisionDoc
+StudyPeriodHasDivisionDoc =N= DivisionDoc
+
+relationship "Has" as MeetingHasMeetingDoc {
+
+}
+
+Meeting -1- MeetingHasMeetingDoc
+MeetingHasMeetingDoc =N= MeetingDoc
+
+relationship "Is of type" as DivOfType {
+
+}
+
+relationship "Is of type" as MeetOfType {
+    
+}
+
+DivisionDocType -1- DivOfType
+DivOfType =N= DivisionDoc
+
+MeetingDocType -1- MeetOfType
+MeetOfType =N= MeetingDoc
 
 @endchen
