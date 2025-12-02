@@ -1,4 +1,15 @@
 services:
+  summit_web:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    depends_on: 
+      summit_db:
+        condition: service_healthy
+    restart: on-failure
+
   summit_db:
     build: summit_database
     environment:
@@ -9,13 +20,12 @@ services:
       - "5432:5432"
     volumes:
       - summit_database_data:/var/lib/postgresql/data
-  
-  summit_web:
-    build: .
-    ports:
-      - "5000:5000"
-    env_file:
-      - .env
+    healthcheck:
+      test: ['CMD', 'pg_isready']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   summit_database_data:
