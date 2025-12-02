@@ -12,7 +12,7 @@ RUN uv sync --no-dev
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 5000
 
 CMD ["uv", "run", "gunicorn", "--workers", "3", \
-     "--bind", "0.0.0.0:3000", "wsgi:app"]
+     "--bind", "0.0.0.0:5000", "wsgi:app"]

@@ -16,7 +16,6 @@ services:
       - "5000:5000"
     env_file:
       - .env
-    command: ["uv", "run", "gunicorn", "--workers", "3", "--bind", "0.0.0.0:5000", "wsgi:app"]
 
 volumes:
   summit_database_data:
