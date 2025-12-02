@@ -2,8 +2,10 @@
 left to right direction
 
 entity "Document" as Doc {
+    document_id : id <<key>>
     document_name : STRING
-    file_path : STRING
+    file_path : STRING <<key>>
+    uploaded : datetime
 }
 
 entity "Division Document" as DivisionDoc {
@@ -22,15 +24,16 @@ entity "Meeting Document Type" as MeetingDocType {
 
 }
 
-entity "Committe" as Committe {
-    id : groupId
+entity "Committe" as Committee {
+    id : groupId <<key>>
 }
 
 entity "Member" as Member {
-    id : userID
+    id : userId <<key>>
 }
 
 entity "Document Owner" as DocOwner{
+    id : id <<key>>
 
 }
 
@@ -38,18 +41,19 @@ relationship "Owns" as DocOwnerOwnsDoc {
 
 }
 
-DocOwner -n- DocOwnerOwnsDoc
+DocOwner -N- DocOwnerOwnsDoc
 DocOwnerOwnsDoc =1= Doc
-DocOwner =>= d {Committe, Member}
+DocOwner =>= d {Committee, Member}
 
-entity "Läsperiod" as StudyPeriod {
-    year : INT
-    period : INT
+entity "Study Period" as StudyPeriod {
+    year : INT <<key>>
+    period : INT <<key>>
+    id : id <<key>>
 }
 
 entity "Meeting" as Meeting {
-    id : uuid
-    date : timestamp
+    id : id <<key>>
+    date : timestamp <<key>>
 }
 
 relationship "Has" as StudyPeriodHasMeeting {

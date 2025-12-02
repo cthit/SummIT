@@ -173,6 +173,7 @@ def callback():
     session.pop("selected_extra_groups", None)
 
     essential_user_info = {
+        "sub": user_info.get("sub"),
         "name": user_info.get("name"),
         "email": user_info.get("email"),
         "cid": user_info.get("cid"),

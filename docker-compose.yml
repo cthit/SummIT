@@ -1,4 +1,15 @@
 services:
+  summit_db:
+    build: summit_database
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: enextremtrandomstringmedflertalettecken
+      POSTGRES_DB: summit_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - summit_database_data:/var/lib/postgresql/data
+  
   summit_web:
     build: .
     ports:
@@ -6,3 +17,6 @@ services:
     env_file:
       - .env
     command: ["uv", "run", "gunicorn", "--workers", "3", "--bind", "0.0.0.0:5000", "wsgi:app"]
+
+volumes:
+  summit_database_data:
