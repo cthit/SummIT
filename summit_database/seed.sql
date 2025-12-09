@@ -1,9 +1,3 @@
--- CREATE DATABASE summit_db;
-
--- \c summit_db
--- gpt sa att det var onödigt :)
--- skapar databasen två gånger eftersom den redan startas i compose filen
-
 CREATE TABLE IF NOT EXISTS StudyPeriod (
     study_period_id SERIAL PRIMARY KEY,
     study_year INTEGER,

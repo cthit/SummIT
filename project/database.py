@@ -2,7 +2,7 @@ import psycopg2
 from psycopg2 import pool
 import os
 from flask import g, Flask
-
+import atexit
 
 class Database:
     """Database connection pool manager"""
@@ -26,7 +26,12 @@ class Database:
         except Exception as e:
             app.logger.error(f"Failed to create database pool: {e}")
             raise
-        app.teardown_appcontext(self.close_all_connections)
+
+        # Return per-request connection
+        app.teardown_request(lambda exc: close_db())
+
+        # Close pool at process exit
+        atexit.register(self.close_all_connections)
 
     def get_connection(self):
         """Get a connection from the pool"""
