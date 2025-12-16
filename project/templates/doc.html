@@ -9,7 +9,13 @@
   >
     <option value="">Select a meeting...</option>
     {% for meeting in meetings %}
-    <option value="{{ meeting }}">{{ meeting }}</option>
+     <option
+      value="{{ meeting.id }}"
+      data-year="{{ meeting.study_period.year }}"
+      data-lp="{{ meeting.study_period.lp|int }}"
+    >
+      {{ meeting.date }} {% if meeting.study_period.lp != 5 %} Study Period {{ meeting.study_period.lp }} {% else %} Summer {% endif %}
+    </option>
     {% endfor %}
   </select>
 </div>
@@ -84,14 +90,23 @@
     const meetingDisplay = document.getElementById("meetingDisplay");
     const meetingTexts = document.querySelectorAll(".meeting-text");
 
-    if (select.value) {
+    const selected = select.selectedOptions[0];
+
+    if (selected && selected.value) {
+      const year = selected.dataset.year;
+      const lp = parseInt(selected.dataset.lp, 10);
+      const lpLabel = lp === 5 ? "Summer" : `SP${lp}`;
+      const label = `${lpLabel} ${year}`;
+
       content.style.display = "block";
-      meetingDisplay.textContent = select.value;
+      meetingDisplay.textContent = label;
       meetingTexts.forEach((span) => {
-        span.textContent = select.value;
+        span.textContent = label;
       });
     } else {
       content.style.display = "none";
+      meetingDisplay.textContent = "";
+      meetingTexts.forEach((span) => (span.textContent = ""));
     }
   }
 </script>

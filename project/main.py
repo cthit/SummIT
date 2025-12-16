@@ -5,7 +5,7 @@ from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, looku
 
 main = Blueprint("main", __name__)
 
-meetings = ["2024 LP4", "2025 LP1", "2025 LP2", "2025 LP3"]
+#meetings = ["2024 LP4", "2025 LP1", "2025 LP2", "2025 LP3"] -- legacy code
 
 
 @main.route("/")
@@ -28,8 +28,9 @@ def doc():
         for group in user.get("groups", [])
         if group.get("post", "") in ["Chairman", "Treasurer"]
     ]
+    
     return render_template(
-        "doc.html", user=user, user_roles=user_roles, meetings=meetings
+        "doc.html", user=user, user_roles=user_roles, meetings=fetch_meetings()
     )
 
 
@@ -39,8 +40,7 @@ def admin():
     years = list(range(date.today().year - 1, date.today().year + 2))
     lps = [(lp.value, lp.name) for lp in LP]
     current_year = date.today().year
-    meetings = fetch_meetings()  # pass meetings to template
-    return render_template("admin.html", years=years, lps=lps, current_year=current_year, meetings=meetings)
+    return render_template("admin.html", years=years, lps=lps, current_year=current_year, meetings=fetch_meetings())
 
 
 @main.route("/admin/create-meeting", methods=["POST"])

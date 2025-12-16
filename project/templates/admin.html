@@ -39,8 +39,8 @@
 
 <h2>Meetings</h2>
 <ul>
-  {% for mid, mdate, spid in meetings %}
-    <li>{{ mdate }} (StudyPeriod ID {{ spid }})</li>
+  {% for meeting in meetings %}
+    <li>{{ meeting.date }} {% if meeting.study_period.lp != 5 %} Study Period {{ meeting.study_period.lp }} {% else %} Summer {% endif %}</li>
   {% else %}
     <li>No meetings yet.</li>
   {% endfor %}

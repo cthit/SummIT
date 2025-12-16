@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS StudyPeriod (
+CREATE TABLE IF NOT EXISTS StudyPeriods (
     study_period_id SERIAL PRIMARY KEY,
     study_year INTEGER,
     study_period INTEGER,
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS StudyPeriod (
 CREATE TABLE IF NOT EXISTS Meetings (
     meeting_id SERIAL PRIMARY KEY,
     meeting_date DATE UNIQUE,
-    study_period_id INTEGER REFERENCES StudyPeriod(study_period_id)
+    study_period_id INTEGER REFERENCES StudyPeriods(study_period_id)
 );
 
 CREATE TABLE IF NOT EXISTS DocumentOwners (
@@ -51,6 +51,6 @@ CREATE TABLE IF NOT EXISTS DivisionDocumentTypes (
 CREATE TABLE IF NOT EXISTS DivisionDocuments (
     document_id INTEGER PRIMARY KEY REFERENCES Documents(document_id),
     type_id INTEGER REFERENCES DivisionDocumentTypes(type_id),
-    study_period_id INTEGER REFERENCES StudyPeriod(study_period_id)
+    study_period_id INTEGER REFERENCES StudyPeriods(study_period_id)
 );
 

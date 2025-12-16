@@ -50,17 +50,18 @@ def create_meeting(meeting_date: datetime.date, study_period: StudyPeriod) -> Me
         return None
 
 
-def fetch_meetings() -> list[tuple[int, datetime.date, int]]:
+def fetch_meetings() -> list[Meeting]:
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT meeting_id, meeting_date, study_period_id
-            FROM Meetings
+            SELECT meeting_id, meeting_date, StudyPeriods.study_period_id, study_year, study_period
+            FROM Meetings JOIN StudyPeriods ON Meetings.study_period_id=StudyPeriods.study_period_id
             ORDER BY meeting_date DESC;
             """
         )
-        return cur.fetchall()
+        meeting_data = cur.fetchall()
+    return list(map(lambda x: Meeting(*x[:2], StudyPeriod(*x[2:])), meeting_data))
     
 def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
     conn = get_db()
@@ -68,7 +69,7 @@ def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
         cur.execute(
             """
             SELECT study_period_id, study_year, study_period
-            FROM StudyPeriod
+            FROM StudyPeriods
             WHERE study_year = %s AND study_period = %s;
             """,
             (year, int(lp)),
@@ -85,7 +86,7 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO StudyPeriod (study_year, study_period)
+                INSERT INTO StudyPeriods (study_year, study_period)
                 VALUES (%s, %s)
                 ON CONFLICT (study_year, study_period) DO NOTHING
                 RETURNING study_period_id, study_year, study_period;
