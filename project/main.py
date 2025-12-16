@@ -3,10 +3,14 @@ from datetime import date
 from .auth import login_required, login_as_admin_required
 from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period
 
+def _meeting_label(meeting):
+    lp_int = int(meeting.study_period.lp)
+    lp_label = "Summer" if lp_int == 5 else f"Study Period {lp_int}"
+    return f"{meeting.date} - {lp_label}"
+
 main = Blueprint("main", __name__)
 
 #meetings = ["2024 LP4", "2025 LP1", "2025 LP2", "2025 LP3"] -- legacy code
-
 
 @main.route("/")
 def index():
@@ -28,9 +32,19 @@ def doc():
         for group in user.get("groups", [])
         if group.get("post", "") in ["Chairman", "Treasurer"]
     ]
-    
+
+    meetings = fetch_meetings()
+    selected_id = request.args.get("meeting_id", type=int)
+    selected_meeting = next((m for m in meetings if m.id == selected_id), None)
+    label = _meeting_label(selected_meeting) if selected_meeting else ""
+
     return render_template(
-        "doc.html", user=user, user_roles=user_roles, meetings=fetch_meetings()
+        "doc.html",
+        user=user,
+        user_roles=user_roles,
+        meetings=meetings,
+        selected_meeting=selected_meeting,
+        label=label,
     )
 
 

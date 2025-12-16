@@ -1,113 +1,87 @@
 {% extends "base.html" %} {% block content %}
 <h1 class="title">This is the documents page!</h1>
+
 <div style="text-align: center">
   <h2 style="display: inline">Choose meeting:</h2>
-  <select
-    id="meetingSelect"
-    onchange="updateContent()"
-    style="margin-left: 10px"
-  >
-    <option value="">Select a meeting...</option>
-    {% for meeting in meetings %}
-     <option
-      value="{{ meeting.id }}"
-      data-year="{{ meeting.study_period.year }}"
-      data-lp="{{ meeting.study_period.lp|int }}"
+  <form method="get" style="display:inline">
+    <select
+      id="meetingSelect"
+      name="meeting_id"
+      style="margin-left: 10px"
+      onchange="if (this.value) this.form.submit();"
     >
-      {{ meeting.date }} {% if meeting.study_period.lp != 5 %} Study Period {{ meeting.study_period.lp }} {% else %} Summer {% endif %}
-    </option>
+      <option value="">Select a meeting...</option>
+      {% for meeting in meetings %}
+      <option
+        value="{{ meeting.id }}"
+        {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
+      >
+        {{ meeting.date }}
+        {% if meeting.study_period.lp|int != 5 %}
+          Study Period {{ meeting.study_period.lp|int }}
+        {% else %}
+          Summer
+        {% endif %}
+      </option>
+      {% endfor %}
+    </select>
+    <!-- Optional: keep as a no-JS fallback
+    <button class="button is-link" type="submit" style="margin-left:10px">Load</button>
+    -->
+  </form>
+</div>
+
+<div class="content" id="documentsContent" {% if not selected_meeting %}style="display: none"{% endif %}>
+  <div id="selectedMeeting" class="notification is-info" style="margin-bottom: 2rem">
+    <strong>Selected Meeting: </strong><span id="meetingDisplay">{{ label }}</span>
+  </div>
+  {% if user_roles %}
+    {% for group_name, post in user_roles %}
+    <div class="box" style="margin-bottom: 2rem">
+      <h2><strong>{{ group_name.title() }}</strong></h2>
+      <div class="columns">
+        <div class="column is-half">
+          <div class="card">
+            <div class="card-content">
+              <h2>This is a plan for <span class="meeting-text">{{ label }}</span></h2>
+            </div>
+          </div>
+        </div>
+        <div class="column is-half">
+          <div class="card">
+            <div class="card-content">
+              <h2>This is a budget for <span class="meeting-text">{{ label }}</span></h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     {% endfor %}
-  </select>
-</div>
-
-<div class="content" id="documentsContent" style="display: none">
-  <div
-    id="selectedMeeting"
-    class="notification is-info"
-    style="margin-bottom: 2rem"
-  >
-    <strong>Selected Meeting: </strong><span id="meetingDisplay"></span>
-  </div>
-
-  {% if user_roles %} {% for group_name, post in user_roles %}
+  {% endif %}
   <div class="box" style="margin-bottom: 2rem">
-    <h2>
-      <strong>{{ group_name.title() }}</strong>
-    </h2>
-
-    <div class="columns">
-      <div class="column is-half">
-        <div class="card">
-          <div class="card-content">
-            <h2>This is a plan for <span class="meeting-text"></span></h2>
-          </div>
-        </div>
-      </div>
-
-      <div class="column is-half">
-        <div class="card">
-          <div class="card-content">
-            <h2>This is a budget for <span class="meeting-text"></span></h2>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endfor %} {% endif %}
-  <div class="box" style="margin-bottom: 2rem">
-    <h2>
-      <strong>General Documents</strong>
-    </h2>
+    <h2><strong>General Documents</strong></h2>
     <div class="columns">
       <div class="card">
         <div class="card-content">
-          <h2>This is the agenda for <span class="meeting-text"></span></h2>
+          <h2>This is the agenda for <span class="meeting-text">{{ label }}</span></h2>
         </div>
       </div>
       <div class="card">
         <div class="card-content">
-          <h2>This is motion #1 for <span class="meeting-text"></span></h2>
+          <h2>This is motion #1 for <span class="meeting-text">{{ label }}</span></h2>
         </div>
       </div>
       <div class="card">
         <div class="card-content">
-          <h2>This is motion #2 for <span class="meeting-text"></span></h2>
+          <h2>This is motion #2 for <span class="meeting-text">{{ label }}</span></h2>
         </div>
       </div>
       <div class="card">
         <div class="card-content">
-          <h2>This is motion #3 for <span class="meeting-text"></span></h2>
+          <h2>This is motion #3 for <span class="meeting-text">{{ label }}</span></h2>
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<script>
-  function updateContent() {
-    const select = document.getElementById("meetingSelect");
-    const content = document.getElementById("documentsContent");
-    const meetingDisplay = document.getElementById("meetingDisplay");
-    const meetingTexts = document.querySelectorAll(".meeting-text");
-
-    const selected = select.selectedOptions[0];
-
-    if (selected && selected.value) {
-      const year = selected.dataset.year;
-      const lp = parseInt(selected.dataset.lp, 10);
-      const lpLabel = lp === 5 ? "Summer" : `SP${lp}`;
-      const label = `${lpLabel} ${year}`;
-
-      content.style.display = "block";
-      meetingDisplay.textContent = label;
-      meetingTexts.forEach((span) => {
-        span.textContent = label;
-      });
-    } else {
-      content.style.display = "none";
-      meetingDisplay.textContent = "";
-      meetingTexts.forEach((span) => (span.textContent = ""));
-    }
-  }
-</script>
 {% endblock %}
