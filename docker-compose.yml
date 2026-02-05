@@ -5,6 +5,8 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    volumes:
+      - summit_uploads:/data/uploads
     depends_on: 
       summit_db:
         condition: service_healthy
@@ -27,3 +29,4 @@ services:
 
 volumes:
   summit_database_data:
+  summit_uploads:

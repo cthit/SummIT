@@ -2,6 +2,11 @@ from project.database import get_db
 import datetime
 from enum import IntEnum
 from dataclasses import dataclass
+from pathlib import Path
+import os
+import hashlib
+
+UPLOAD_BASE: Path = Path("/")/"data"/"uploads"
 
 class LP(IntEnum):
     LP1 = 1
@@ -21,6 +26,18 @@ class Meeting:
     id: int
     date: datetime.date
     study_period: StudyPeriod
+
+@dataclass(frozen=True, slots=True)
+class DocumentOwner:
+    _id: str
+
+@dataclass(frozen=True, slots=True)
+class Document:
+    _id: int
+    name: str
+    owner: DocumentOwner
+    file_path: Path
+    uploaded: datetime.datetime
 
 
 def create_meeting(meeting_date: datetime.date, study_period: StudyPeriod) -> Meeting | None:
@@ -105,3 +122,54 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
         print(e)
         conn.rollback()
         return None 
+
+def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner) -> Document:
+    conn = get_db()
+    file_hash = hashlib.md5(the_file)
+    file_path = UPLOAD_BASE/(f"{file_hash.hexdigest()}_{file_name}")
+
+    create_document_owner(document_owner)
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO Documents (document_name, gamma_owner_id, file_path)
+                VALUES (%s, %s, %s)
+                RETURNING document_id, uploaded;
+                """,
+                (file_name, document_owner._id, str(file_path)),
+            )
+            document_id, timestamp = cur.fetchone()
+        
+        document = Document(
+            _id = document_id,
+            name = file_name,
+            owner = document_owner,
+            file_path = file_path,
+            uploaded = timestamp,
+        )
+        if file_path.is_file():
+            raise Exception("File already exists...?")
+        with file_path.open("wb") as f: f.write(the_file)
+        conn.commit()
+    except:
+        conn.rollback()
+        raise
+    return document
+
+def create_document_owner(document_owner: DocumentOwner):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO DocumentOwners (gamma_owner_id)
+                VALUES (%s)
+                ON CONFLICT (gamma_owner_id) DO NOTHING;
+                """,
+                (document_owner._id,),
+            )
+    except:
+        conn.rollback()
+        raise   

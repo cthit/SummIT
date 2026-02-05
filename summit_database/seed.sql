@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS MeetingDocumentTypes (
     type_name TEXT UNIQUE
 );
 
+-- motioner, prepositioner, dagordning
 CREATE TABLE IF NOT EXISTS MeetingDocuments (
     document_id INTEGER PRIMARY KEY REFERENCES Documents(document_id),
     type_id INTEGER REFERENCES MeetingDocumentTypes(type_id),
@@ -48,6 +49,7 @@ CREATE TABLE IF NOT EXISTS DivisionDocumentTypes (
     type_name TEXT UNIQUE
 );
 
+-- rapporter, budget, berättelse, planer eg. en gång per lp eller år 
 CREATE TABLE IF NOT EXISTS DivisionDocuments (
     document_id INTEGER PRIMARY KEY REFERENCES Documents(document_id),
     type_id INTEGER REFERENCES DivisionDocumentTypes(type_id),

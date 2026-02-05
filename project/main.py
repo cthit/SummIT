@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from datetime import date
 from .auth import login_required, login_as_admin_required
-from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period
+from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner
 
 def _meeting_label(meeting):
     lp_int = int(meeting.study_period.lp)
@@ -88,3 +88,17 @@ def admin_create_meeting():
     created = create_meeting(meeting_date, sp)
     flash("Meeting created." if created else "Failed to create meeting.", "success" if created else "error")
     return redirect(url_for("main.admin"))
+
+@main.route("/documents/upload", methods=["POST","GET"])
+@login_required
+def document_upload():
+    if request.method == "GET":
+        return render_template("upload.html")
+    
+    uploaded_file = request.files.get("file")
+    if not uploaded_file:
+        flash("No file selected.", "error")
+        return render_template("upload.html")
+    success = upload_document(uploaded_file.stream.read(), uploaded_file.filename, DocumentOwner(g.user["id"]))
+    flash("Document uploaded successfully.", "success")
+    return redirect(url_for("main.doc"))
