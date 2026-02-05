@@ -56,3 +56,8 @@ CREATE TABLE IF NOT EXISTS DivisionDocuments (
     study_period_id INTEGER REFERENCES StudyPeriods(study_period_id)
 );
 
+CREATE TABLE IF NOT EXISTS DocumentRequire (
+    document_type_id INTEGER REFERENCES DivisionDocumentTypes(type_id),
+    meeting_id INTEGER REFERENCES Meetings(meeting_id),
+    gamma_owner_id TEXT REFERENCES DocumentOwners(gamma_owner_id)
+);
