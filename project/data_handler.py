@@ -287,4 +287,27 @@ def fetch_documents_for_meeting(meeting_id: int, user_id: str, group_ids: list[s
             "type": doc_type
         })
     
-    return documents_by_owner   
+    return documents_by_owner
+
+def fetch_document_by_id(document_id: int, allowed_owner_ids: list[str]) -> dict | None:
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT document_id, document_name, file_path, gamma_owner_id
+            FROM Documents
+            WHERE document_id = %s AND gamma_owner_id = ANY(%s);
+            """,
+            (document_id, allowed_owner_ids)
+        )
+        row = cur.fetchone()
+    
+    if not row:
+        return None
+    
+    return {
+        "id": row[0],
+        "name": row[1],
+        "file_path": row[2],
+        "owner_id": row[3]
+    }   

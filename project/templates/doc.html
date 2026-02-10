@@ -40,7 +40,11 @@
       <h3><strong>{{ owner_names.get(owner_id, owner_id) }}</strong></h3>
       <ul>
         {% for doc in docs %}
-        <li>{{ doc.name }} ({{ doc.type }})</li>
+        <li>
+          <a href="{{ url_for('main.download_document', document_id=doc.id) }}" class="has-text-link">
+            {{ doc.name }}
+          </a> ({{ doc.type }})
+        </li>
         {% endfor %}
       </ul>
     </div>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file, abort
 from datetime import date
 from .auth import login_required, login_as_admin_required
 from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType, fetch_documents_for_meeting
@@ -149,3 +149,17 @@ def document_upload():
     )
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("main.doc"))
+
+@main.route("/documents/download/<int:document_id>")
+@login_required
+def download_document(document_id):
+    from .data_handler import fetch_document_by_id
+    user = g.get("user")
+    group_ids = [g.get("id") for g in user.get("groups", [])]
+    all_owner_ids = [user["id"]] + group_ids
+    
+    doc = fetch_document_by_id(document_id, all_owner_ids)
+    if not doc:
+        abort(404)
+    
+    return send_file(doc["file_path"], as_attachment=True, download_name=doc["name"])
