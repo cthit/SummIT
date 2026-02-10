@@ -1,6 +1,6 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">This is the documents page!</h1>
-<h2>Need to upload a doccuments, press <a href="/documents/upload">here</a></h2>
+<h1 class="title">Documents</h1>
+<h2>Need to upload a document? <a href="/documents/upload">Click here</a></h2>
 <div style="text-align: center">
   <h2 style="display: inline">Choose meeting:</h2>
   <form method="get" style="display:inline">
@@ -25,63 +25,29 @@
       </option>
       {% endfor %}
     </select>
-    <!-- Optional: keep as a no-JS fallback
-    <button class="button is-link" type="submit" style="margin-left:10px">Load</button>
-    -->
   </form>
 </div>
 
-<div class="content" id="documentsContent" {% if not selected_meeting %}style="display: none"{% endif %}>
-  <div id="selectedMeeting" class="notification is-info" style="margin-bottom: 2rem">
-    <strong>Selected Meeting: </strong><span id="meetingDisplay">{{ label }}</span>
+{% if selected_meeting %}
+<div class="content" style="margin-top: 2rem">
+  <div class="notification is-info">
+    <strong>Selected Meeting: </strong>{{ label }}
   </div>
-  {% if user_roles %}
-    {% for group_name, post in user_roles %}
-    <div class="box" style="margin-bottom: 2rem">
-      <h2><strong>{{ group_name.title() }}</strong></h2>
-      <div class="columns">
-        <div class="column is-half">
-          <div class="card">
-            <div class="card-content">
-              <h2>This is a plan for <span class="meeting-text">{{ label }}</span></h2>
-            </div>
-          </div>
-        </div>
-        <div class="column is-half">
-          <div class="card">
-            <div class="card-content">
-              <h2>This is a budget for <span class="meeting-text">{{ label }}</span></h2>
-            </div>
-          </div>
-        </div>
-      </div>
+  
+  {% if documents_by_owner %}
+    {% for owner_id, docs in documents_by_owner.items() %}
+    <div class="box">
+      <h3><strong>{{ owner_names.get(owner_id, owner_id) }}</strong></h3>
+      <ul>
+        {% for doc in docs %}
+        <li>{{ doc.name }} ({{ doc.type }})</li>
+        {% endfor %}
+      </ul>
     </div>
     {% endfor %}
+  {% else %}
+    <div class="notification">No documents found for this meeting.</div>
   {% endif %}
-  <div class="box" style="margin-bottom: 2rem">
-    <h2><strong>General Documents</strong></h2>
-    <div class="columns">
-      <div class="card">
-        <div class="card-content">
-          <h2>This is the agenda for <span class="meeting-text">{{ label }}</span></h2>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-content">
-          <h2>This is motion #1 for <span class="meeting-text">{{ label }}</span></h2>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-content">
-          <h2>This is motion #2 for <span class="meeting-text">{{ label }}</span></h2>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-content">
-          <h2>This is motion #3 for <span class="meeting-text">{{ label }}</span></h2>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
+{% endif %}
 {% endblock %}

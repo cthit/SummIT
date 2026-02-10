@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from datetime import date
 from .auth import login_required, login_as_admin_required
-from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType
+from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType, fetch_documents_for_meeting
 
 def _meeting_label(meeting):
     lp_int = int(meeting.study_period.lp)
@@ -27,24 +27,30 @@ def profile():
 @login_required
 def doc():
     user = g.get("user")
-    user_roles = [
-        (group.get("name", ""), group.get("post", ""))
-        for group in user.get("groups", [])
-        if group.get("post", "") in ["Chairman", "Treasurer"]
-    ]
-
+    
     meetings = fetch_meetings()
     selected_id = request.args.get("meeting_id", type=int)
     selected_meeting = next((m for m in meetings if m.id == selected_id), None)
     label = _meeting_label(selected_meeting) if selected_meeting else ""
-
+    
+    # Fetch documents if a meeting is selected
+    documents_by_owner = {}
+    owner_names = {user["id"]: "My Documents"}
+    if selected_meeting:
+        group_ids = [g.get("id") for g in user.get("groups", [])]
+        documents_by_owner = fetch_documents_for_meeting(selected_meeting.id, user["id"], group_ids)
+        # Create mapping of group IDs to prettyNames
+        for group in user.get("groups", []):
+            owner_names[group["id"]] = group["prettyName"]
+    
     return render_template(
         "doc.html",
         user=user,
-        user_roles=user_roles,
         meetings=meetings,
         selected_meeting=selected_meeting,
         label=label,
+        documents_by_owner=documents_by_owner,
+        owner_names=owner_names,
     )
 
 

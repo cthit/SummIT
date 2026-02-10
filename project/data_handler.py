@@ -239,4 +239,52 @@ def create_document_owner(document_owner: DocumentOwner, is_group: bool = False)
                 )
     except:
         conn.rollback()
-        raise   
+        raise
+
+def fetch_documents_for_meeting(meeting_id: int, user_id: str, group_ids: list[str]) -> dict:
+    conn = get_db()
+    all_owner_ids = [user_id] + group_ids
+    
+    with conn.cursor() as cur:
+        # Fetch meeting documents
+        cur.execute(
+            """
+            SELECT d.document_id, d.document_name, d.gamma_owner_id, mdt.type_name
+            FROM Documents d
+            JOIN MeetingDocuments md ON d.document_id = md.document_id
+            JOIN MeetingDocumentTypes mdt ON md.type_id = mdt.type_id
+            WHERE md.meeting_id = %s AND d.gamma_owner_id = ANY(%s)
+            ORDER BY d.uploaded DESC;
+            """,
+            (meeting_id, all_owner_ids)
+        )
+        meeting_docs = cur.fetchall()
+        
+        # Fetch division documents for the meeting's study period
+        cur.execute(
+            """
+            SELECT d.document_id, d.document_name, d.gamma_owner_id, ddt.type_name
+            FROM Documents d
+            JOIN DivisionDocuments dd ON d.document_id = dd.document_id
+            JOIN DivisionDocumentTypes ddt ON dd.type_id = ddt.type_id
+            JOIN Meetings m ON dd.study_period_id = m.study_period_id
+            WHERE m.meeting_id = %s AND d.gamma_owner_id = ANY(%s)
+            ORDER BY d.uploaded DESC;
+            """,
+            (meeting_id, all_owner_ids)
+        )
+        division_docs = cur.fetchall()
+    
+    # Group documents by owner
+    documents_by_owner = {}
+    for doc in meeting_docs + division_docs:
+        doc_id, doc_name, owner_id, doc_type = doc
+        if owner_id not in documents_by_owner:
+            documents_by_owner[owner_id] = []
+        documents_by_owner[owner_id].append({
+            "id": doc_id,
+            "name": doc_name,
+            "type": doc_type
+        })
+    
+    return documents_by_owner   
