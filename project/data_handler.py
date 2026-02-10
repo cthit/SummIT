@@ -145,6 +145,51 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                 (file_name, document_owner._id, str(file_path)),
             )
             document_id, timestamp = cur.fetchone()
+            
+            if document_type == DocumentType.MEETING:
+                # Ensure motion type exists
+                cur.execute(
+                    """
+                    INSERT INTO MeetingDocumentTypes (type_name) VALUES ('motion')
+                    ON CONFLICT (type_name) DO NOTHING;
+                    """
+                )
+                cur.execute(
+                    "SELECT type_id FROM MeetingDocumentTypes WHERE type_name = 'motion';"
+                )
+                type_id = cur.fetchone()[0]
+                cur.execute(
+                    """
+                    INSERT INTO MeetingDocuments (document_id, type_id, meeting_id)
+                    VALUES (%s, %s, %s);
+                    """,
+                    (document_id, type_id, meeting_id)
+                )
+            else:  # DocumentType.DIVISION
+                # Get study_period_id from meeting
+                cur.execute(
+                    "SELECT study_period_id FROM Meetings WHERE meeting_id = %s;",
+                    (meeting_id,)
+                )
+                study_period_id = cur.fetchone()[0]
+                # Ensure budget type exists
+                cur.execute(
+                    """
+                    INSERT INTO DivisionDocumentTypes (type_name) VALUES ('budget')
+                    ON CONFLICT (type_name) DO NOTHING;
+                    """
+                )
+                cur.execute(
+                    "SELECT type_id FROM DivisionDocumentTypes WHERE type_name = 'budget';"
+                )
+                type_id = cur.fetchone()[0]
+                cur.execute(
+                    """
+                    INSERT INTO DivisionDocuments (document_id, type_id, study_period_id)
+                    VALUES (%s, %s, %s);
+                    """,
+                    (document_id, type_id, study_period_id)
+                )
         
         document = Document(
             _id = document_id,
