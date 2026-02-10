@@ -1,6 +1,6 @@
 from project.database import get_db
 import datetime
-from enum import IntEnum
+from enum import IntEnum, Enum
 from dataclasses import dataclass
 from pathlib import Path
 import os
@@ -14,6 +14,10 @@ class LP(IntEnum):
     LP3 = 3
     LP4 = 4
     SUMMER = 5
+
+class DocumentType(str, Enum):
+    MEETING = "meeting"
+    DIVISION = "division"
 
 @dataclass(frozen=True, slots=True)
 class StudyPeriod:
@@ -123,7 +127,7 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
         conn.rollback()
         return None 
 
-def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner) -> Document:
+def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner, meeting_id: int, document_type: DocumentType) -> Document:
     conn = get_db()
     file_hash = hashlib.md5(the_file)
     file_path = UPLOAD_BASE/(f"{file_hash.hexdigest()}_{file_name}")

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from datetime import date
 from .auth import login_required, login_as_admin_required
-from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner
+from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType
 
 def _meeting_label(meeting):
     lp_int = int(meeting.study_period.lp)
@@ -93,12 +93,38 @@ def admin_create_meeting():
 @login_required
 def document_upload():
     if request.method == "GET":
-        return render_template("upload.html")
+        meetings = fetch_meetings()
+        selected_id = request.args.get("meeting_id", type=int)
+        selected_meeting = next((m for m in meetings if m.id == selected_id), None)
+        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting)
     
     uploaded_file = request.files.get("file")
+    meeting_id = request.form.get("meeting_id", type=int)
+    document_type_str = request.form.get("document_type")
+    
     if not uploaded_file:
         flash("No file selected.", "error")
-        return render_template("upload.html")
-    success = upload_document(uploaded_file.stream.read(), uploaded_file.filename, DocumentOwner(g.user["id"]))
+        meetings = fetch_meetings()
+        return render_template("upload.html", meetings=meetings)
+    if not meeting_id:
+        flash("Please select a meeting.", "error")
+        meetings = fetch_meetings()
+        return render_template("upload.html", meetings=meetings, selected_meeting=None)
+    
+    try:
+        document_type = DocumentType(document_type_str)
+    except ValueError:
+        flash("Please select a document type.", "error")
+        meetings = fetch_meetings()
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
+        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting)
+    
+    upload_document(
+        uploaded_file.stream.read(),
+        uploaded_file.filename,
+        DocumentOwner(g.user["id"]),
+        meeting_id,
+        document_type
+    )
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("main.doc"))

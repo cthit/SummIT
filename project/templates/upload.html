@@ -2,7 +2,42 @@
 
 <h1>Upload File</h1>
 
+<div style="text-align: center">
+  <h2 style="display: inline">Choose meeting:</h2>
+  <form method="get" style="display:inline">
+    <select
+      id="meetingSelect"
+      name="meeting_id"
+      style="margin-left: 10px"
+      onchange="if (this.value) this.form.submit();"
+    >
+      <option value="">Select a meeting...</option>
+      {% for meeting in meetings %}
+      <option
+        value="{{ meeting.id }}"
+        {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
+      >
+        {{ meeting.date }}
+        {% if meeting.study_period.lp|int != 5 %}
+          Study Period {{ meeting.study_period.lp|int }}
+        {% else %}
+          Summer
+        {% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
 <form action="/documents/upload" method="post" enctype="multipart/form-data">
+    {% if selected_meeting %}
+    <input type="hidden" name="meeting_id" value="{{ selected_meeting.id }}">
+    {% endif %}
+    <div style="margin-bottom: 1rem">
+      <label>Document type:</label><br>
+      <label><input type="radio" name="document_type" value="meeting" required> Meeting Document</label><br>
+      <label><input type="radio" name="document_type" value="division" required> Division Document</label>
+    </div>
     <label for="file">Choose file:</label>
     <input type="file" name="file" id="file" required>
     <br><br>
