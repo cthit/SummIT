@@ -118,6 +118,7 @@ def callback():
         # Filter groups to only include committees
         active_groups = [
             {
+                "id": group.get("id"),
                 "prettyName": group.get("prettyName", {}),
                 "name": group.get("superGroup", {}).get("name"),
                 "post": group.get("post", {}).get("enName"),
@@ -152,18 +153,24 @@ def callback():
     extra_groups = [
         (
             {
+                "id": "dev-group-id-devit",
                 "name": "devit",
+                "prettyName": "DevIT (Chairman)",
                 "post": "Chairman",
             }
             if args == "devit_ordf"
             else (
                 {
+                    "id": "dev-group-id-devit",
                     "name": "devit",
+                    "prettyName": "DevIT (Treasurer)",
                     "post": "Treasurer",
                 }
                 if args == "devit_kass"
                 else {
+                    "id": f"dev-group-id-{args}",
                     "name": args,
+                    "prettyName": "MötespresidIT" if args == "motespresidit" else ("styrIT" if args == "styrit" else args.upper()),
                     "post": "Member",
                 }
             )

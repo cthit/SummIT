@@ -34,6 +34,16 @@
     <input type="hidden" name="meeting_id" value="{{ selected_meeting.id }}">
     {% endif %}
     <div style="margin-bottom: 1rem">
+      <label>Upload as:</label><br>
+      <select name="owner_id" required>
+        <option value="">Select owner...</option>
+        <option value="self">Myself</option>
+        {% for group in user.groups %}
+        <option value="{{ group.id }}">{{ group.prettyName }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="margin-bottom: 1rem">
       <label>Document type:</label><br>
       <label><input type="radio" name="document_type" value="meeting" required> Meeting Document</label><br>
       <label><input type="radio" name="document_type" value="division" required> Division Document</label>

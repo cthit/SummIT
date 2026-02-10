@@ -127,12 +127,12 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
         conn.rollback()
         return None 
 
-def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner, meeting_id: int, document_type: DocumentType) -> Document:
+def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner, meeting_id: int, document_type: DocumentType, is_group: bool = False) -> Document:
     conn = get_db()
     file_hash = hashlib.md5(the_file)
     file_path = UPLOAD_BASE/(f"{file_hash.hexdigest()}_{file_name}")
 
-    create_document_owner(document_owner)
+    create_document_owner(document_owner, is_group)
 
     try:
         with conn.cursor() as cur:
@@ -207,7 +207,7 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
         raise
     return document
 
-def create_document_owner(document_owner: DocumentOwner):
+def create_document_owner(document_owner: DocumentOwner, is_group: bool = False):
     conn = get_db()
     try:
         with conn.cursor() as cur:
@@ -219,6 +219,24 @@ def create_document_owner(document_owner: DocumentOwner):
                 """,
                 (document_owner._id,),
             )
+            if is_group:
+                cur.execute(
+                    """
+                    INSERT INTO Committees (gamma_group_id)
+                    VALUES (%s)
+                    ON CONFLICT (gamma_group_id) DO NOTHING;
+                    """,
+                    (document_owner._id,),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO Members (gamma_user_id)
+                    VALUES (%s)
+                    ON CONFLICT (gamma_user_id) DO NOTHING;
+                    """,
+                    (document_owner._id,),
+                )
     except:
         conn.rollback()
         raise   

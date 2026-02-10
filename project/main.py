@@ -96,20 +96,26 @@ def document_upload():
         meetings = fetch_meetings()
         selected_id = request.args.get("meeting_id", type=int)
         selected_meeting = next((m for m in meetings if m.id == selected_id), None)
-        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting)
+        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting, user=g.user)
     
     uploaded_file = request.files.get("file")
     meeting_id = request.form.get("meeting_id", type=int)
     document_type_str = request.form.get("document_type")
+    owner_id = request.form.get("owner_id")
     
     if not uploaded_file:
         flash("No file selected.", "error")
         meetings = fetch_meetings()
-        return render_template("upload.html", meetings=meetings)
+        return render_template("upload.html", meetings=meetings, user=g.user)
     if not meeting_id:
         flash("Please select a meeting.", "error")
         meetings = fetch_meetings()
-        return render_template("upload.html", meetings=meetings, selected_meeting=None)
+        return render_template("upload.html", meetings=meetings, selected_meeting=None, user=g.user)
+    if not owner_id:
+        flash("Please select who to upload as.", "error")
+        meetings = fetch_meetings()
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
+        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting, user=g.user)
     
     try:
         document_type = DocumentType(document_type_str)
@@ -117,14 +123,23 @@ def document_upload():
         flash("Please select a document type.", "error")
         meetings = fetch_meetings()
         selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
-        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting)
+        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting, user=g.user)
+    
+    # Determine the actual owner ID (self or group)
+    if owner_id == "self":
+        actual_owner_id = g.user["id"]
+        is_group = False
+    else:
+        actual_owner_id = owner_id
+        is_group = True
     
     upload_document(
         uploaded_file.stream.read(),
         uploaded_file.filename,
-        DocumentOwner(g.user["id"]),
+        DocumentOwner(actual_owner_id),
         meeting_id,
-        document_type
+        document_type,
+        is_group
     )
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("main.doc"))
