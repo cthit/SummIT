@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
 from .auth import auth as auth_blueprint
 from .main import main as main_blueprint
+from .database import db
 import os
 
 
@@ -13,6 +14,8 @@ def create_app():
     client_secret = os.getenv("GAMMA_CLIENT_SECRET", "")
 
     app = Flask(__name__)
+
+    db.init_app(app)
 
     app.config["SECRET_KEY"] = os.getenv("APP_SECRET_KEY", "")
 

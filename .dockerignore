@@ -1,0 +1,16 @@
+__pycache__/
+.github/
+.venv/
+.vscode/
+documentation/
+instance/
+summit_database/
+tests/
+.dockerignore
+.env
+.env-example
+.gitignore
+docker-compose.yml
+Dockerfile
+LICENSE
+README.md

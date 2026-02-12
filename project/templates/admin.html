@@ -1,7 +1,33 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% block content %}
+<h1 class="title">Admin</h1>
 
-{% block content %}
-<h1 class="title">
-  This is the admin page!
-</h1>
+<form method="post" action="{{ url_for('main.admin_create_meeting') }}">
+  <label for="year">Year</label>
+  <select id="year" name="year" required>
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+
+  <label for="lp">LP</label>
+  <select id="lp" name="lp" required>
+    {% for value, name in lps %}
+    <option value="{{ value }}">{{ name }}</option>
+    {% endfor %}
+  </select>
+  <br>
+  <label for="meeting_date">Meeting date</label>
+  <input id="meeting_date" name="meeting_date" type="date" required />
+  <br><br>
+  <button type="submit">Create meeting</button>
+</form>
+
+<h2>Meetings</h2>
+<ul>
+  {% for meeting in meetings %}
+    <li>{{ meeting.date }} {% if meeting.study_period.lp != 5 %} Study Period {{ meeting.study_period.lp }} {% else %} Summer {% endif %}</li>
+  {% else %}
+    <li>No meetings yet.</li>
+  {% endfor %}
+</ul>
 {% endblock %}

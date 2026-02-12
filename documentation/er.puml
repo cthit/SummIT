@@ -1,0 +1,95 @@
+@startchen data_base_diagram
+left to right direction
+
+entity "Document" as Doc {
+    document_id : id <<key>>
+    document_name : STRING
+    file_path : STRING <<key>>
+    uploaded : datetime
+}
+
+entity "Division Document" as DivisionDoc {
+
+}
+
+entity "Division Document Type" as DivisionDocType {
+
+}
+
+entity "Meeting Document" as MeetingDoc {
+
+}
+
+entity "Meeting Document Type" as MeetingDocType {
+
+}
+
+entity "Committe" as Committee {
+    id : groupId <<key>>
+}
+
+entity "Member" as Member {
+    id : userId <<key>>
+}
+
+entity "Document Owner" as DocOwner{
+    id : id <<key>>
+
+}
+
+relationship "Owns" as DocOwnerOwnsDoc {
+
+}
+
+DocOwner -N- DocOwnerOwnsDoc
+DocOwnerOwnsDoc =1= Doc
+DocOwner =>= d {Committee, Member}
+
+entity "Study Period" as StudyPeriod {
+    year : INT <<key>>
+    period : INT <<key>>
+    id : id <<key>>
+}
+
+entity "Meeting" as Meeting {
+    id : id <<key>>
+    date : timestamp <<key>>
+}
+
+relationship "Has" as StudyPeriodHasMeeting {
+}
+
+Meeting =N= StudyPeriodHasMeeting
+StudyPeriodHasMeeting -1- StudyPeriod
+
+Doc =>= d {DivisionDoc, MeetingDoc}
+
+relationship "Has" as StudyPeriodHasDivisionDoc {
+
+}
+
+StudyPeriod -1- StudyPeriodHasDivisionDoc
+StudyPeriodHasDivisionDoc =N= DivisionDoc
+
+relationship "Has" as MeetingHasMeetingDoc {
+
+}
+
+Meeting -1- MeetingHasMeetingDoc
+MeetingHasMeetingDoc =N= MeetingDoc
+
+relationship "Is of type" as DivOfType {
+
+}
+
+relationship "Is of type" as MeetOfType {
+    
+}
+
+DivisionDocType -1- DivOfType
+DivOfType =N= DivisionDoc
+
+MeetingDocType -1- MeetOfType
+MeetOfType =N= MeetingDoc
+
+@endchen
