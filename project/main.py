@@ -108,6 +108,7 @@ def document_upload():
     meeting_id = request.form.get("meeting_id", type=int)
     document_type_str = request.form.get("document_type")
     owner_id = request.form.get("owner_id")
+    document_subtype_str = request.form.get("meeting_document_subtype") if document_type_str == "meeting" else request.form.get("division_document_subtype")
     
     if not uploaded_file:
         flash("No file selected.", "error")
@@ -131,6 +132,12 @@ def document_upload():
         selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
         return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting, user=g.user)
     
+    if not document_subtype_str:
+        flash("Please select a document subtype.", "error")
+        meetings = fetch_meetings()
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
+        return render_template("upload.html", meetings=meetings, selected_meeting=selected_meeting, user=g.user)
+    
     # Determine the actual owner ID (self or group)
     if owner_id == "self":
         actual_owner_id = g.user["id"]
@@ -145,6 +152,7 @@ def document_upload():
         DocumentOwner(actual_owner_id),
         meeting_id,
         document_type,
+        document_subtype_str,
         is_group
     )
     flash("Document uploaded successfully.", "success")

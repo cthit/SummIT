@@ -29,7 +29,8 @@
   </form>
 </div>
 
-<form action="/documents/upload" method="post" enctype="multipart/form-data">
+<form id="uploadForm" action="/documents/upload" method="post" enctype="multipart/form-data"
+  {% if not selected_meeting %}style="display: none;"{% endif %}>
     {% if selected_meeting %}
     <input type="hidden" name="meeting_id" value="{{ selected_meeting.id }}">
     {% endif %}
@@ -45,13 +46,66 @@
     </div>
     <div style="margin-bottom: 1rem">
       <label>Document type:</label><br>
-      <label><input type="radio" name="document_type" value="meeting" required> Meeting Document</label><br>
-      <label><input type="radio" name="document_type" value="division" required> Division Document</label>
+      <label><input type="radio" name="document_type" value="meeting" required onchange="toggleDocumentSubtype()"> Meeting Document</label><br>
+      <label><input type="radio" name="document_type" value="division" required onchange="toggleDocumentSubtype()"> Division Document</label>
+    </div>
+    <div id="meeting_subtype" style="display: none; margin-bottom: 1rem">
+      <label>Meeting document type:</label><br>
+      <select name="meeting_document_subtype">
+        <option value="">Select type...</option>
+        <option value="motion">Motion</option>
+        <option value="proposition">Proposition</option>
+        <option value="dagordning">Dagordning</option>
+        <option value="interpellation">Interpellation</option>
+        <option value="nomineringar">Nomineringar</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div id="division_subtype" style="display: none; margin-bottom: 1rem">
+      <label>Division document type:</label><br>
+      <select name="division_document_subtype">
+        <option value="">Select type...</option>
+        <option value="verksamhetsrapport">Verksamhetsrapport</option>
+        <option value="verksametsberattelse">Verksamhetsberättelse</option>
+        <option value="ekonomiskrapport">Ekonomiskrapport</option>
+        <option value="ekonomiskberattelse">Ekonomiskberättelse</option>
+        <option value="budget">Budget</option>
+      </select>
     </div>
     <label for="file">Choose file:</label>
     <input type="file" name="file" id="file" required>
     <br><br>
     <input type="submit" value="Upload">
 </form>
+
+<script>
+function toggleDocumentSubtype() {
+  const meetingRadio = document.querySelector('input[name="document_type"][value="meeting"]');
+  const divisionRadio = document.querySelector('input[name="document_type"][value="division"]');
+  const meetingSubtype = document.getElementById('meeting_subtype');
+  const divisionSubtype = document.getElementById('division_subtype');
+  const meetingSelect = document.querySelector('select[name="meeting_document_subtype"]');
+  const divisionSelect = document.querySelector('select[name="division_document_subtype"]');
+  
+  if (meetingRadio.checked) {
+    meetingSubtype.style.display = 'block';
+    divisionSubtype.style.display = 'none';
+    meetingSelect.required = true;
+    divisionSelect.required = false;
+  } else if (divisionRadio.checked) {
+    meetingSubtype.style.display = 'none';
+    divisionSubtype.style.display = 'block';
+    meetingSelect.required = false;
+    divisionSelect.required = true;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('uploadForm');
+  if (form && form.style.display !== 'none') {
+    form.reset();
+  }
+});
+</script>
 
 {% endblock %}

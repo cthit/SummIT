@@ -19,6 +19,21 @@ class DocumentType(str, Enum):
     MEETING = "meeting"
     DIVISION = "division"
 
+class MeetingDocumentTypes(str, Enum):
+    MOTION = "motion"
+    PROPOSITION = "proposition"
+    DAGORDNING = "dagordning"
+    INTERPELLATION = "interpellation"
+    NOMINERINGAR = "nomineringar"
+    OTHER = "other"
+
+class DivisionDocumentTypes(str, Enum):
+    VERKSAMHETSRAPPORT = "verksamhetsrapport"
+    VERKSAMETSBERATTELSE = "veksamhetsberattelse"
+    EKONOMISKRAPPORT = "ekonomiskrapport"
+    EKONOMISKBERATTELSE = "ekonomiskberattelse"
+    BUDGET = "budget"
+
 @dataclass(frozen=True, slots=True)
 class StudyPeriod:
     id: int
@@ -127,7 +142,7 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
         conn.rollback()
         return None 
 
-def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner, meeting_id: int, document_type: DocumentType, is_group: bool = False) -> Document:
+def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner, meeting_id: int, document_type: DocumentType, document_subtype: str, is_group: bool = False) -> Document:
     conn = get_db()
     file_hash = hashlib.md5(the_file)
     file_path = UPLOAD_BASE/(f"{file_hash.hexdigest()}_{file_name}")
@@ -147,15 +162,17 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
             document_id, timestamp = cur.fetchone()
             
             if document_type == DocumentType.MEETING:
-                # Ensure motion type exists
+                # Use provided subtype
                 cur.execute(
                     """
-                    INSERT INTO MeetingDocumentTypes (type_name) VALUES ('motion')
+                    INSERT INTO MeetingDocumentTypes (type_name) VALUES (%s)
                     ON CONFLICT (type_name) DO NOTHING;
-                    """
+                    """,
+                    (document_subtype,)
                 )
                 cur.execute(
-                    "SELECT type_id FROM MeetingDocumentTypes WHERE type_name = 'motion';"
+                    "SELECT type_id FROM MeetingDocumentTypes WHERE type_name = %s;",
+                    (document_subtype,)
                 )
                 type_id = cur.fetchone()[0]
                 cur.execute(
@@ -172,15 +189,17 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                     (meeting_id,)
                 )
                 study_period_id = cur.fetchone()[0]
-                # Ensure budget type exists
+                # Use provided subtype
                 cur.execute(
                     """
-                    INSERT INTO DivisionDocumentTypes (type_name) VALUES ('budget')
+                    INSERT INTO DivisionDocumentTypes (type_name) VALUES (%s)
                     ON CONFLICT (type_name) DO NOTHING;
-                    """
+                    """,
+                    (document_subtype,)
                 )
                 cur.execute(
-                    "SELECT type_id FROM DivisionDocumentTypes WHERE type_name = 'budget';"
+                    "SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;",
+                    (document_subtype,)
                 )
                 type_id = cur.fetchone()[0]
                 cur.execute(
