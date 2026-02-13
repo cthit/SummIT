@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">Manage Document Requirements</h1>
+<h1>Manage Document Requirements</h1>
 
-<div class="notification is-info">
+<div>
   <strong>Meeting: </strong>{{ meeting.date }}
   {% if meeting.study_period.lp|int != 5 %}
     Study Period {{ meeting.study_period.lp|int }}
@@ -11,21 +11,21 @@
 </div>
 
 <form method="post">
-  <table style="border-collapse: collapse; margin: 2rem auto;">
+  <table class="requirements-table">
     <thead>
       <tr>
-        <th style="border: 1px solid #ddd; padding: 8px;">Group</th>
+        <th>Group</th>
         {% for doc_type_value, doc_type_name in division_doc_types %}
-        <th style="border: 1px solid #ddd; padding: 8px;">{{ doc_type_name }}</th>
+        <th>{{ doc_type_name }}</th>
         {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for group in groups %}
       <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;"><strong>{{ group.name }}</strong></td>
+        <td><strong>{{ group.name }}</strong></td>
         {% for doc_type_value, doc_type_name in division_doc_types %}
-        <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+        <td>
           <input type="checkbox" 
                  name="{{ group.id }}_{{ doc_type_value }}"
                  {% if group.id in current_requires and doc_type_value in current_requires[group.id] %}checked{% endif %}>
@@ -35,10 +35,10 @@
       {% endfor %}
     </tbody>
   </table>
-  
-  <div style="text-align: center; margin-top: 2rem;">
-    <button type="submit" class="button is-primary">Save Requirements</button>
-    <a href="{{ url_for('main.admin') }}" class="button">Cancel</a>
+
+  <div class="center-content">
+    <button type="submit">Save Requirements</button>
+    <a href="{{ url_for('main.admin') }}">Cancel</a>
   </div>
 </form>
 

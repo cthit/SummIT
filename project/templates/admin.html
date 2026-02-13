@@ -1,9 +1,9 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">Admin</h1>
+<h1>Admin</h1>
 
-<div style="text-align: center; margin-bottom: 3rem;">
-  <h2 style="display: inline">Select meeting:</h2>
-  <select id="meetingSelect" style="margin-left: 10px" onchange="loadMeetingRequirements()">
+<div class="center-content">
+  <h2 class="inline-display">Select meeting:</h2>
+  <select id="meetingSelect" onchange="loadMeetingRequirements()">
     <option value="">Select a meeting...</option>
     {% for meeting in meetings %}
     <option value="{{ meeting.id }}">
@@ -12,14 +12,14 @@
     </option>
     {% endfor %}
   </select>
-  <a href="{{ url_for('main.create_meeting_page') }}" class="button is-primary" style="margin-left: 1rem;">Create Meeting</a>
+  <a href="{{ url_for('main.create_meeting_page') }}">Create Meeting</a>
 </div>
 
-<div id="requirementsContainer" style="display: none; margin-top: 2rem;">
-  <h2 class="subtitle">Document Requirements</h2>
+<div id="requirementsContainer" class="hidden">
+  <h2>Document Requirements</h2>
   <div id="requirementsTable"></div>
-  <button onclick="editMeeting()" class="button" style="margin-top: 1rem;">Edit Meeting</button>
-  <button onclick="deleteMeeting()" class="button is-danger" style="margin-top: 1rem;">Delete Meeting</button>
+  <button onclick="editMeeting()">Edit Meeting</button>
+  <button onclick="deleteMeeting()">Delete Meeting</button>
 </div>
 
 <script>
@@ -41,18 +41,18 @@ function loadMeetingRequirements() {
   fetch(`/admin/meeting-requirements/${meetingId}`)
     .then(r => r.json())
     .then(data => {
-      let html = '<table style="border-collapse: collapse; margin: 0 auto;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px;">Group</th>';
+      let html = '<table class="requirements-table"><thead><tr><th>Group</th>';
       
       data.doc_types.forEach(dt => {
-        html += `<th style="border: 1px solid #ddd; padding: 8px;">${dt[1]}</th>`;
+        html += `<th>${dt[1]}</th>`;
       });
       html += '</tr></thead><tbody>';
       
       data.groups.forEach(group => {
-        html += `<tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>${group.name}</strong></td>`;
+        html += `<tr><td><strong>${group.name}</strong></td>`;
         data.doc_types.forEach(dt => {
           const checked = data.requires[group.id] && data.requires[group.id].includes(dt[0]) ? '✓' : '';
-          html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${checked}</td>`;
+          html += `<td>${checked}</td>`;
         });
         html += '</tr>';
       });

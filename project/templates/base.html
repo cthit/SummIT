@@ -5,36 +5,27 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SummIT</title>
-    <style>
-      body{
-        background-color: #09CDDA;
-      }
-      div.navbar{
-        display: flex;
-        font-size: 250%;
-        justify-content: space-between;
-      }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
 
   <body>
     <div class="navbar">
-      <a href="{{ url_for('main.index') }}" class="navbar-item">
+      <a href="{{ url_for('main.index') }}">
         Home
       </a>
-      <a href="{{ url_for('main.doc') }}" class="navbar-item">
+      <a href="{{ url_for('main.doc') }}">
         Documents
       </a>
-      <a href="{{ url_for('main.admin') }}" class="navbar-item">
+      <a href="{{ url_for('main.admin') }}">
         Admin
       </a>
-      <a href="{{ url_for('main.profile') }}" class="navbar-item">
+      <a href="{{ url_for('main.profile') }}">
         Profile
       </a>
-      <a href="{{ url_for('auth.login') }}" class="navbar-item">
+      <a href="{{ url_for('auth.login') }}">
         Login
       </a>
-      <a href="{{ url_for('auth.logout') }}" class="navbar-item">
+      <a href="{{ url_for('auth.logout') }}">
         Logout
       </a>
     </div>

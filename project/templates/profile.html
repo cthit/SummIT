@@ -1,11 +1,11 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">
+<h1>
   Welcome, {{ user.name if user and user.name else (user.email if user and
   user.email else 'digIT User') }}!
 </h1>
 
 {% if user %}
-<div class="content">
+<div>
   <h2>Profile Information</h2>
 
   <!-- Basic user info -->
@@ -53,12 +53,12 @@
 
   <!-- Logout button -->
   <div style="margin-top: 2rem">
-    <a class="button is-light" href="{{ url_for('auth.logout') }}">Logout</a>
+    <a href="{{ url_for('auth.logout') }}">Logout</a>
   </div>
 </div>
 {% else %}
-<div class="content">
+<div>
   <p>You are not logged in.</p>
-  <a class="button is-primary" href="{{ url_for('auth.login') }}">Login</a>
+  <a href="{{ url_for('auth.login') }}">Login</a>
 </div>
 {% endif %} {% endblock %}

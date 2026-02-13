@@ -2,13 +2,12 @@
 
 <h1>Upload File</h1>
 
-<div style="text-align: center">
-  <h2 style="display: inline">Choose meeting:</h2>
-  <form method="get" style="display:inline">
+<div class="center-content">
+  <h2 class="inline-display">Choose meeting:</h2>
+  <form method="get" class="inline-display">
     <select
       id="meetingSelect"
       name="meeting_id"
-      style="margin-left: 10px"
       onchange="if (this.value) this.form.submit();"
     >
       <option value="">Select a meeting...</option>
@@ -30,11 +29,11 @@
 </div>
 
 <form id="uploadForm" action="/documents/upload" method="post" enctype="multipart/form-data"
-  {% if not selected_meeting %}style="display: none;"{% endif %}>
+  {% if not selected_meeting %}class="hidden"{% endif %}>
     {% if selected_meeting %}
     <input type="hidden" name="meeting_id" value="{{ selected_meeting.id }}">
     {% endif %}
-    <div style="margin-bottom: 1rem">
+    <div>
       <label>Upload as:</label><br>
       <select name="owner_id" required>
         <option value="">Select owner...</option>
@@ -44,12 +43,12 @@
         {% endfor %}
       </select>
     </div>
-    <div style="margin-bottom: 1rem">
+    <div>
       <label>Document type:</label><br>
       <label><input type="radio" name="document_type" value="meeting" required onchange="toggleDocumentSubtype()"> Meeting Document</label><br>
       <label><input type="radio" name="document_type" value="division" required onchange="toggleDocumentSubtype()"> Division Document</label>
     </div>
-    <div id="meeting_subtype" style="display: none; margin-bottom: 1rem">
+    <div id="meeting_subtype" class="hidden">
       <label>Meeting document type:</label><br>
       <select name="meeting_document_subtype">
         <option value="">Select type...</option>
@@ -61,7 +60,7 @@
         <option value="other">Other</option>
       </select>
     </div>
-    <div id="division_subtype" style="display: none; margin-bottom: 1rem">
+    <div id="division_subtype" class="hidden">
       <label>Division document type:</label><br>
       <select name="division_document_subtype">
         <option value="">Select type...</option>

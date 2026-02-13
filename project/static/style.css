@@ -1,0 +1,38 @@
+/* Layout */
+body {
+  background-color: #09CDDA;
+}
+
+div.navbar {
+  display: flex;
+  font-size: 250%;
+  justify-content: space-between;
+}
+
+.center-content {
+  text-align: center;
+}
+
+.inline-display {
+  display: inline;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Tables */
+.requirements-table {
+  border-collapse: collapse;
+  margin: 2rem auto;
+}
+
+.requirements-table th,
+.requirements-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.requirements-table td.center {
+  text-align: center;
+}

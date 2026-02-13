@@ -1,14 +1,14 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">{% if meeting %}Edit Meeting{% else %}Create Meeting{% endif %}</h1>
+<h1>{% if meeting %}Edit Meeting{% else %}Create Meeting{% endif %}</h1>
 
 <form method="post">
-  <div style="margin-bottom: 1.5rem;">
+  <div>
     <label for="meeting_date"><strong>Meeting Date</strong></label><br>
     <input id="meeting_date" name="meeting_date" type="date" 
            value="{% if meeting %}{{ meeting.date }}{% endif %}" required />
   </div>
 
-  <div style="margin-bottom: 1.5rem;">
+  <div>
     <label for="year"><strong>Year</strong></label><br>
     <select id="year" name="year" required>
       {% for y in years %}
@@ -19,7 +19,7 @@
     </select>
   </div>
 
-  <div style="margin-bottom: 1.5rem;">
+  <div>
     <label for="lp"><strong>Study Period</strong></label><br>
     <select id="lp" name="lp" required>
       {% for value, name in lps %}
@@ -29,22 +29,22 @@
     </select>
   </div>
 
-  <h2 class="subtitle">Document Requirements</h2>
-  <table style="border-collapse: collapse; margin: 2rem auto;">
+  <h2>Document Requirements</h2>
+  <table class="requirements-table">
     <thead>
       <tr>
-        <th style="border: 1px solid #ddd; padding: 8px;">Group</th>
+        <th>Group</th>
         {% for doc_type_value, doc_type_name in division_doc_types %}
-        <th style="border: 1px solid #ddd; padding: 8px;">{{ doc_type_name }}</th>
+        <th>{{ doc_type_name }}</th>
         {% endfor %}
       </tr>
     </thead>
     <tbody>
       {% for group in groups %}
       <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;"><strong>{{ group.name }}</strong></td>
+        <td><strong>{{ group.name }}</strong></td>
         {% for doc_type_value, doc_type_name in division_doc_types %}
-        <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+        <td>
           <input type="checkbox" 
                  name="{{ group.id }}_{{ doc_type_value }}"
                  {% if group.id in current_requires and doc_type_value in current_requires[group.id] %}checked{% endif %}>
@@ -54,10 +54,10 @@
       {% endfor %}
     </tbody>
   </table>
-  
-  <div style="text-align: center; margin-top: 2rem;">
-    <button type="submit" class="button is-primary">{% if meeting %}Update Meeting{% else %}Create Meeting{% endif %}</button>
-    <a href="{{ url_for('main.admin') }}" class="button">Cancel</a>
+
+  <div class="center-content">
+    <button type="submit">{% if meeting %}Update Meeting{% else %}Create Meeting{% endif %}</button>
+    <a href="{{ url_for('main.admin') }}">Cancel</a>
   </div>
 </form>
 

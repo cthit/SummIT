@@ -1,13 +1,12 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">Documents</h1>
+<h1>Documents</h1>
 <h2>Need to upload a document? <a href="/documents/upload">Click here</a></h2>
-<div style="text-align: center">
-  <h2 style="display: inline">Choose meeting:</h2>
-  <form method="get" style="display:inline">
+<div class="center-content">
+  <h2 class="inline-display">Choose meeting:</h2>
+  <form method="get" class="inline-display">
     <select
       id="meetingSelect"
       name="meeting_id"
-      style="margin-left: 10px"
       onchange="if (this.value) this.form.submit();"
     >
       <option value="">Select a meeting...</option>
@@ -29,23 +28,22 @@
 </div>
 
 {% if selected_meeting %}
-<div class="content" style="margin-top: 2rem">
-  <div class="notification is-info">
+<div>
+  <div>
     <strong>Selected Meeting: </strong>{{ label }}
   </div>
   
   {% if documents_by_owner %}
     {% for owner_id, docs in documents_by_owner.items() %}
-    <div class="box">
+    <div>
       <h3><strong>{{ owner_names.get(owner_id, owner_id) }}</strong></h3>
       <ul>
         {% for doc in docs %}
         <li>
-          <a href="{{ url_for('main.download_document', document_id=doc.id) }}" class="has-text-link">
+          <a href="{{ url_for('main.download_document', document_id=doc.id) }}">
             {{ doc.name }}
           </a> ({{ doc.type }})
           <a href="{{ url_for('main.delete_document', document_id=doc.id) }}" 
-             class="has-text-danger" 
              onclick="return confirm('Are you sure you want to delete this document?');">(delete)</a>
         </li>
         {% endfor %}
@@ -53,7 +51,7 @@
     </div>
     {% endfor %}
   {% else %}
-    <div class="notification">No documents found for this meeting.</div>
+    <div>No documents found for this meeting.</div>
   {% endif %}
 </div>
 {% endif %}
