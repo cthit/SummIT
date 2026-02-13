@@ -44,6 +44,9 @@
           <a href="{{ url_for('main.download_document', document_id=doc.id) }}" class="has-text-link">
             {{ doc.name }}
           </a> ({{ doc.type }})
+          <a href="{{ url_for('main.delete_document', document_id=doc.id) }}" 
+             class="has-text-danger" 
+             onclick="return confirm('Are you sure you want to delete this document?');">(delete)</a>
         </li>
         {% endfor %}
       </ul>

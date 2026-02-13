@@ -310,4 +310,46 @@ def fetch_document_by_id(document_id: int, allowed_owner_ids: list[str]) -> dict
         "name": row[1],
         "file_path": row[2],
         "owner_id": row[3]
-    }   
+    }
+
+def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # Get file path first
+            cur.execute(
+                "SELECT file_path FROM Documents WHERE document_id = %s AND gamma_owner_id = ANY(%s);",
+                (document_id, allowed_owner_ids)
+            )
+            row = cur.fetchone()
+            if not row:
+                return False
+            
+            file_path = Path(row[0])
+            
+            # Delete from MeetingDocuments or DivisionDocuments first (foreign key constraint)
+            cur.execute(
+                "DELETE FROM MeetingDocuments WHERE document_id = %s;",
+                (document_id,)
+            )
+            cur.execute(
+                "DELETE FROM DivisionDocuments WHERE document_id = %s;",
+                (document_id,)
+            )
+            
+            # Now delete from Documents
+            cur.execute(
+                "DELETE FROM Documents WHERE document_id = %s AND gamma_owner_id = ANY(%s);",
+                (document_id, allowed_owner_ids)
+            )
+            
+            # Delete physical file
+            if file_path.is_file():
+                file_path.unlink()
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return False   

@@ -163,3 +163,19 @@ def download_document(document_id):
         abort(404)
     
     return send_file(doc["file_path"], as_attachment=True, download_name=doc["name"])
+
+@main.route("/documents/delete/<int:document_id>")
+@login_required
+def delete_document(document_id):
+    from .data_handler import delete_document as delete_doc
+    user = g.get("user")
+    group_ids = [g.get("id") for g in user.get("groups", [])]
+    all_owner_ids = [user["id"]] + group_ids
+    
+    success = delete_doc(document_id, all_owner_ids)
+    if success:
+        flash("Document deleted successfully.", "success")
+    else:
+        flash("Failed to delete document.", "error")
+    
+    return redirect(url_for("main.doc"))
