@@ -1,33 +1,79 @@
 {% extends "base.html" %} {% block content %}
 <h1 class="title">Admin</h1>
 
-<form method="post" action="{{ url_for('main.admin_create_meeting') }}">
-  <label for="year">Year</label>
-  <select id="year" name="year" required>
-    {% for y in years %}
-    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+<div style="text-align: center; margin-bottom: 3rem;">
+  <h2 style="display: inline">Select meeting:</h2>
+  <select id="meetingSelect" style="margin-left: 10px" onchange="loadMeetingRequirements()">
+    <option value="">Select a meeting...</option>
+    {% for meeting in meetings %}
+    <option value="{{ meeting.id }}">
+      {{ meeting.date }}
+      {% if meeting.study_period.lp != 5 %}Study Period {{ meeting.study_period.lp }}{% else %}Summer{% endif %}
+    </option>
     {% endfor %}
   </select>
+  <a href="{{ url_for('main.create_meeting_page') }}" class="button is-primary" style="margin-left: 1rem;">Create Meeting</a>
+</div>
 
-  <label for="lp">LP</label>
-  <select id="lp" name="lp" required>
-    {% for value, name in lps %}
-    <option value="{{ value }}">{{ name }}</option>
-    {% endfor %}
-  </select>
-  <br>
-  <label for="meeting_date">Meeting date</label>
-  <input id="meeting_date" name="meeting_date" type="date" required />
-  <br><br>
-  <button type="submit">Create meeting</button>
-</form>
+<div id="requirementsContainer" style="display: none; margin-top: 2rem;">
+  <h2 class="subtitle">Document Requirements</h2>
+  <div id="requirementsTable"></div>
+  <button onclick="editMeeting()" class="button" style="margin-top: 1rem;">Edit Meeting</button>
+  <button onclick="deleteMeeting()" class="button is-danger" style="margin-top: 1rem;">Delete Meeting</button>
+</div>
 
-<h2>Meetings</h2>
-<ul>
-  {% for meeting in meetings %}
-    <li>{{ meeting.date }} {% if meeting.study_period.lp != 5 %} Study Period {{ meeting.study_period.lp }} {% else %} Summer {% endif %}</li>
-  {% else %}
-    <li>No meetings yet.</li>
-  {% endfor %}
-</ul>
+<script>
+let currentMeetingId = null;
+
+function loadMeetingRequirements() {
+  const select = document.getElementById('meetingSelect');
+  const meetingId = select.value;
+  const container = document.getElementById('requirementsContainer');
+  const tableDiv = document.getElementById('requirementsTable');
+  
+  if (!meetingId) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  currentMeetingId = meetingId;
+  
+  fetch(`/admin/meeting-requirements/${meetingId}`)
+    .then(r => r.json())
+    .then(data => {
+      let html = '<table style="border-collapse: collapse; margin: 0 auto;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px;">Group</th>';
+      
+      data.doc_types.forEach(dt => {
+        html += `<th style="border: 1px solid #ddd; padding: 8px;">${dt[1]}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      
+      data.groups.forEach(group => {
+        html += `<tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>${group.name}</strong></td>`;
+        data.doc_types.forEach(dt => {
+          const checked = data.requires[group.id] && data.requires[group.id].includes(dt[0]) ? '✓' : '';
+          html += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${checked}</td>`;
+        });
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      tableDiv.innerHTML = html;
+      container.style.display = 'block';
+    });
+}
+
+function editMeeting() {
+  if (currentMeetingId) {
+    location.href = `/admin/manage-meeting/${currentMeetingId}`;
+  }
+}
+
+function deleteMeeting() {
+  if (currentMeetingId && confirm('Delete this meeting and all associated documents?')) {
+    location.href = `/admin/delete-meeting/${currentMeetingId}`;
+  }
+}
+</script>
+
 {% endblock %}

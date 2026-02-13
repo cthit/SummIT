@@ -1,12 +1,28 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file, abort
 from datetime import date
 from .auth import login_required, login_as_admin_required
-from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType, fetch_documents_for_meeting
+from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType, fetch_documents_for_meeting, DivisionDocumentTypes
 
 def _meeting_label(meeting):
     lp_int = int(meeting.study_period.lp)
     lp_label = "Summer" if lp_int == 5 else f"Study Period {lp_int}"
     return f"{meeting.date} - {lp_label}"
+
+def _get_groups():
+    return [
+        {"id": "dev-group-id-styrit", "name": "styrIT"},
+        {"id": "dev-group-id-digit", "name": "digIT"},
+        {"id": "dev-group-id-devit", "name": "DevIT"}
+    ]
+
+def _get_meeting_form_data():
+    return {
+        "years": list(range(date.today().year - 1, date.today().year + 2)),
+        "lps": [(lp.value, lp.name) for lp in LP],
+        "current_year": date.today().year,
+        "groups": _get_groups(),
+        "division_doc_types": [(dt.value, dt.name) for dt in DivisionDocumentTypes]
+    }
 
 main = Blueprint("main", __name__)
 
@@ -57,15 +73,32 @@ def doc():
 @main.route("/admin")
 @login_as_admin_required
 def admin():
-    years = list(range(date.today().year - 1, date.today().year + 2))
-    lps = [(lp.value, lp.name) for lp in LP]
-    current_year = date.today().year
-    return render_template("admin.html", years=years, lps=lps, current_year=current_year, meetings=fetch_meetings())
+    return render_template("admin.html", meetings=fetch_meetings())
 
 
-@main.route("/admin/create-meeting", methods=["POST"])
+@main.route("/admin/meeting-requirements/<int:meeting_id>")
 @login_as_admin_required
-def admin_create_meeting():
+def get_meeting_requirements_json(meeting_id):
+    from flask import jsonify
+    from .data_handler import get_document_requires
+    
+    form_data = _get_meeting_form_data()
+    return jsonify({
+        "groups": form_data["groups"],
+        "doc_types": form_data["division_doc_types"],
+        "requires": get_document_requires(meeting_id)
+    })
+
+@main.route("/admin/create-meeting", methods=["GET", "POST"])
+@login_as_admin_required
+def create_meeting_page():
+    from .data_handler import set_document_require
+    
+    form_data = _get_meeting_form_data()
+    
+    if request.method == "GET":
+        return render_template("create_meeting.html", **form_data, current_requires={})
+    
     meeting_date_str = request.form.get("meeting_date")
     year_str = request.form.get("year")
     lp_str = request.form.get("lp")
@@ -88,11 +121,20 @@ def admin_create_meeting():
         if sp is None:
             flash("Failed to create study period.", "error")
             return redirect(url_for("main.admin"))
-        # StudyPeriod was created successfully
-        flash(f"Study period {y} {lp.name} created.", "success")
 
-    created = create_meeting(meeting_date, sp)
-    flash("Meeting created." if created else "Failed to create meeting.", "success" if created else "error")
+    meeting = create_meeting(meeting_date, sp)
+    if not meeting:
+        flash("Failed to create meeting.", "error")
+        return redirect(url_for("main.admin"))
+    
+    # Save requirements
+    for group in form_data["groups"]:
+        for doc_type in DivisionDocumentTypes:
+            checkbox_name = f"{group['id']}_{doc_type.value}"
+            if request.form.get(checkbox_name):
+                set_document_require(meeting.id, group["id"], doc_type.value)
+    
+    flash("Meeting created successfully.", "success")
     return redirect(url_for("main.admin"))
 
 @main.route("/documents/upload", methods=["POST","GET"])
@@ -187,3 +229,56 @@ def delete_document(document_id):
         flash("Failed to delete document.", "error")
     
     return redirect(url_for("main.doc"))
+
+@main.route("/admin/delete-meeting/<int:meeting_id>")
+@login_as_admin_required
+def delete_meeting(meeting_id):
+    from .data_handler import delete_meeting_and_documents
+    
+    success = delete_meeting_and_documents(meeting_id)
+    if success:
+        flash("Meeting and associated documents deleted successfully.", "success")
+    else:
+        flash("Failed to delete meeting.", "error")
+    
+    return redirect(url_for("main.admin"))
+
+@main.route("/admin/manage-meeting/<int:meeting_id>", methods=["GET", "POST"])
+@login_as_admin_required
+def manage_meeting(meeting_id):
+    from .data_handler import get_document_requires, set_document_require, remove_document_require
+    
+    meetings = fetch_meetings()
+    meeting = next((m for m in meetings if m.id == meeting_id), None)
+    if not meeting:
+        flash("Meeting not found.", "error")
+        return redirect(url_for("main.admin"))
+    
+    form_data = _get_meeting_form_data()
+    
+    if request.method == "POST":
+        # Clear all requirements for this meeting first
+        existing = get_document_requires(meeting_id)
+        for group_id, doc_types in existing.items():
+            for doc_type in doc_types:
+                remove_document_require(meeting_id, group_id, doc_type)
+        
+        # Add new requirements from form
+        for group in form_data["groups"]:
+            for doc_type in DivisionDocumentTypes:
+                checkbox_name = f"{group['id']}_{doc_type.value}"
+                if request.form.get(checkbox_name):
+                    set_document_require(meeting_id, group["id"], doc_type.value)
+        
+        flash("Meeting updated successfully.", "success")
+        return redirect(url_for("main.admin"))
+    
+    # GET request - show form
+    current_requires = get_document_requires(meeting_id)
+    
+    return render_template(
+        "create_meeting.html",
+        meeting=meeting,
+        **form_data,
+        current_requires=current_requires
+    )

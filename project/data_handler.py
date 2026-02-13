@@ -1,6 +1,6 @@
 from project.database import get_db
 import datetime
-from enum import IntEnum, Enum
+from enum import IntEnum, StrEnum
 from dataclasses import dataclass
 from pathlib import Path
 import os
@@ -15,11 +15,11 @@ class LP(IntEnum):
     LP4 = 4
     SUMMER = 5
 
-class DocumentType(str, Enum):
+class DocumentType(StrEnum):
     MEETING = "meeting"
     DIVISION = "division"
 
-class MeetingDocumentTypes(str, Enum):
+class MeetingDocumentTypes(StrEnum):
     MOTION = "motion"
     PROPOSITION = "proposition"
     DAGORDNING = "dagordning"
@@ -27,7 +27,7 @@ class MeetingDocumentTypes(str, Enum):
     NOMINERINGAR = "nomineringar"
     OTHER = "other"
 
-class DivisionDocumentTypes(str, Enum):
+class DivisionDocumentTypes(StrEnum):
     VERKSAMHETSRAPPORT = "verksamhetsrapport"
     VERKSAMETSBERATTELSE = "veksamhetsberattelse"
     EKONOMISKRAPPORT = "ekonomiskrapport"
@@ -371,4 +371,131 @@ def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
     except Exception as e:
         print(e)
         conn.rollback()
-        return False   
+        return False
+
+def delete_meeting_and_documents(meeting_id: int) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # Get all meeting documents
+            cur.execute(
+                "SELECT d.document_id, d.file_path FROM Documents d JOIN MeetingDocuments md ON d.document_id = md.document_id WHERE md.meeting_id = %s;",
+                (meeting_id,)
+            )
+            meeting_doc_rows = cur.fetchall()
+            
+            # Get all division documents (via study_period_id)
+            cur.execute(
+                "SELECT d.document_id, d.file_path FROM Documents d JOIN DivisionDocuments dd ON d.document_id = dd.document_id JOIN Meetings m ON dd.study_period_id = m.study_period_id WHERE m.meeting_id = %s;",
+                (meeting_id,)
+            )
+            division_doc_rows = cur.fetchall()
+            
+            # Delete meeting documents
+            for doc_id, file_path in meeting_doc_rows:
+                cur.execute("DELETE FROM MeetingDocuments WHERE document_id = %s;", (doc_id,))
+                cur.execute("DELETE FROM Documents WHERE document_id = %s;", (doc_id,))
+                if file_path and Path(file_path).is_file():
+                    Path(file_path).unlink()
+            
+            # Delete division documents
+            for doc_id, file_path in division_doc_rows:
+                cur.execute("DELETE FROM DivisionDocuments WHERE document_id = %s;", (doc_id,))
+                cur.execute("DELETE FROM Documents WHERE document_id = %s;", (doc_id,))
+                if file_path and Path(file_path).is_file():
+                    Path(file_path).unlink()
+            
+            # Delete document requires
+            cur.execute("DELETE FROM DocumentRequire WHERE meeting_id = %s;", (meeting_id,))
+            
+            # Delete meeting
+            cur.execute("DELETE FROM Meetings WHERE meeting_id = %s;", (meeting_id,))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return False
+
+def get_document_requires(meeting_id: int) -> dict:
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT dt.type_name, dr.gamma_owner_id
+            FROM DocumentRequire dr
+            JOIN DivisionDocumentTypes dt ON dr.document_type_id = dt.type_id
+            WHERE dr.meeting_id = %s;
+            """,
+            (meeting_id,)
+        )
+        rows = cur.fetchall()
+    
+    # Return dict: {group_id: [doc_type1, doc_type2, ...]}
+    result = {}
+    for doc_type, group_id in rows:
+        if group_id not in result:
+            result[group_id] = []
+        result[group_id].append(doc_type)
+    return result
+
+def set_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # Ensure document owner exists
+            cur.execute(
+                "INSERT INTO DocumentOwners (gamma_owner_id) VALUES (%s) ON CONFLICT DO NOTHING;",
+                (group_id,)
+            )
+            cur.execute(
+                "INSERT INTO Committees (gamma_group_id) VALUES (%s) ON CONFLICT DO NOTHING;",
+                (group_id,)
+            )
+            
+            # Get type_id
+            cur.execute("SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;", (doc_type_name,))
+            row = cur.fetchone()
+            if not row:
+                # Create the type if it doesn't exist
+                cur.execute("INSERT INTO DivisionDocumentTypes (type_name) VALUES (%s) RETURNING type_id;", (doc_type_name,))
+                row = cur.fetchone()
+            
+            type_id = row[0]
+            
+            # Insert requirement
+            cur.execute(
+                "INSERT INTO DocumentRequire (document_type_id, meeting_id, gamma_owner_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
+                (type_id, meeting_id, group_id)
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return False
+
+def remove_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # Get type_id
+            cur.execute("SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;", (doc_type_name,))
+            row = cur.fetchone()
+            if not row:
+                return False
+            
+            type_id = row[0]
+            
+            # Delete requirement
+            cur.execute(
+                "DELETE FROM DocumentRequire WHERE document_type_id = %s AND meeting_id = %s AND gamma_owner_id = %s;",
+                (type_id, meeting_id, group_id)
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return False

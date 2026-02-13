@@ -59,5 +59,6 @@ CREATE TABLE IF NOT EXISTS DivisionDocuments (
 CREATE TABLE IF NOT EXISTS DocumentRequire (
     document_type_id INTEGER REFERENCES DivisionDocumentTypes(type_id),
     meeting_id INTEGER REFERENCES Meetings(meeting_id),
-    gamma_owner_id TEXT REFERENCES DocumentOwners(gamma_owner_id)
+    gamma_owner_id TEXT REFERENCES DocumentOwners(gamma_owner_id),
+    PRIMARY KEY (document_type_id, meeting_id, gamma_owner_id)
 );
