@@ -282,3 +282,7 @@ def manage_meeting(meeting_id):
         **form_data,
         current_requires=current_requires
     )
+@main.route("/admin/mail")
+@login_as_admin_required
+def mail ():
+    return render_template("mail.html")
