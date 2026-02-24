@@ -31,7 +31,7 @@ services:
     image: cthit/gotify:latest
     environment:
       GOTIFY_PRE-SHARED-KEY: "123abc"
-      GOTIFY_MOCK-MODE: "false"
+      GOTIFY_MOCK-MODE: "true"
       GOTIFY_DEBUG-MODE: "true"
       GOTIFY_GOOGLE-MAIL.KEYFILE: "/app/gapp.json"
       GOTIFY_GOOGLE-MAIL.ADMIN-MAIL: "admin@chalmers.it"
