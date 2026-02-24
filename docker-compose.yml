@@ -26,6 +26,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  
+  gotify:
+    image: cthit/gotify:latest
+    environment:
+      GOTIFY_PRE-SHARED-KEY: "123abc"
+      GOTIFY_MOCK-MODE: "false"
+      GOTIFY_DEBUG-MODE: "true"
+      GOTIFY_GOOGLE-MAIL.KEYFILE: "/app/gapp.json"
+      GOTIFY_GOOGLE-MAIL.ADMIN-MAIL: "admin@chalmers.it"
+    volumes:
+      - ./gapp.json:/app/gapp.json:ro,z
+    ports:
+      - 8080:8080
 
 volumes:
   summit_database_data:

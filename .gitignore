@@ -5,6 +5,7 @@
 
 # project specific
 /gamma
+gapp.json
 
 # User-specific files
 *.rsuser

@@ -1,32 +1,29 @@
 {% extends "base.html" %} {% block content %}
 <h1>Documents</h1>
 <h2>Need to upload a document? <a href="/documents/upload">Click here</a></h2>
-<div class="center-content">
-  <h2 class="inline-display">Choose meeting:</h2>
-  <form method="get" class="inline-display">
-    <select
-      id="meetingSelect"
-      name="meeting_id"
-      onchange="if (this.value) this.form.submit();"
+<h2 class="inline-display">Choose meeting:</h2>
+<form method="get" class="inline-display">
+  <select
+    id="meetingSelect"
+    name="meeting_id"
+    onchange="if (this.value) this.form.submit();"
+  >
+    <option value="">Select a meeting...</option>
+    {% for meeting in meetings %}
+    <option
+      value="{{ meeting.id }}"
+      {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
     >
-      <option value="">Select a meeting...</option>
-      {% for meeting in meetings %}
-      <option
-        value="{{ meeting.id }}"
-        {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
-      >
-        {{ meeting.date }}
-        {% if meeting.study_period.lp|int != 5 %}
-          Study Period {{ meeting.study_period.lp|int }}
-        {% else %}
-          Summer
-        {% endif %}
-      </option>
-      {% endfor %}
-    </select>
-  </form>
-</div>
-
+      {{ meeting.date }}
+      {% if meeting.study_period.lp|int != 5 %}
+        Study Period {{ meeting.study_period.lp|int }}
+      {% else %}
+        Summer
+      {% endif %}
+    </option>
+    {% endfor %}
+  </select>
+</form>
 {% if selected_meeting %}
 <div>
   <div>
