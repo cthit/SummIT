@@ -10,7 +10,7 @@ def example_simple_mail():
     response = send_mail(
         to="napster@chalmers.it",
         subject="Test Email",
-        body="It worked B)"
+        body="It worked B)",
     )
     
     print(f"Email sent! Response: {response}")

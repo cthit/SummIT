@@ -6,7 +6,7 @@ body {
 div.navbar {
   display: flex;
   font-size: 250%;
-  justify-content: space-between;
+  justify-content: space-evenly;
 }
 
 .center-content {

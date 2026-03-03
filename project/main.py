@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, send_file, abort, jsonify
 from datetime import date
 from .auth import login_required, login_as_admin_required
-from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType, fetch_documents_for_meeting, DivisionDocumentTypes
+from .data_handler import LP, StudyPeriod, create_meeting, fetch_meetings, lookup_study_period, create_study_period, upload_document, DocumentOwner, DocumentType, fetch_documents_for_meeting, DivisionDocumentTypes, get_document_requires, set_document_require, fetch_document_by_id, delete_document, delete_meeting_and_documents, remove_document_require
 
 def _meeting_label(meeting):
     lp_int = int(meeting.study_period.lp)
@@ -26,7 +26,6 @@ def _get_meeting_form_data():
 
 main = Blueprint("main", __name__)
 
-#meetings = ["2024 LP4", "2025 LP1", "2025 LP2", "2025 LP3"] -- legacy code
 
 @main.route("/")
 def index():
@@ -79,9 +78,6 @@ def admin():
 @main.route("/admin/meeting-requirements/<int:meeting_id>")
 @login_as_admin_required
 def get_meeting_requirements_json(meeting_id):
-    from flask import jsonify
-    from .data_handler import get_document_requires
-    
     form_data = _get_meeting_form_data()
     return jsonify({
         "groups": form_data["groups"],
@@ -89,11 +85,10 @@ def get_meeting_requirements_json(meeting_id):
         "requires": get_document_requires(meeting_id)
     })
 
+
 @main.route("/admin/create-meeting", methods=["GET", "POST"])
 @login_as_admin_required
 def create_meeting_page():
-    from .data_handler import set_document_require
-    
     form_data = _get_meeting_form_data()
     
     if request.method == "GET":
@@ -136,6 +131,7 @@ def create_meeting_page():
     
     flash("Meeting created successfully.", "success")
     return redirect(url_for("main.admin"))
+
 
 @main.route("/documents/upload", methods=["POST","GET"])
 @login_required
@@ -200,10 +196,10 @@ def document_upload():
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("main.doc"))
 
+
 @main.route("/documents/download/<int:document_id>")
 @login_required
 def download_document(document_id):
-    from .data_handler import fetch_document_by_id
     user = g.get("user")
     group_ids = [g.get("id") for g in user.get("groups", [])]
     all_owner_ids = [user["id"]] + group_ids
@@ -214,15 +210,15 @@ def download_document(document_id):
     
     return send_file(doc["file_path"], as_attachment=True, download_name=doc["name"])
 
+
 @main.route("/documents/delete/<int:document_id>")
 @login_required
-def delete_document(document_id):
-    from .data_handler import delete_document as delete_doc
+def delete_document_view(document_id):
     user = g.get("user")
     group_ids = [g.get("id") for g in user.get("groups", [])]
     all_owner_ids = [user["id"]] + group_ids
     
-    success = delete_doc(document_id, all_owner_ids)
+    success = delete_document(document_id, all_owner_ids)
     if success:
         flash("Document deleted successfully.", "success")
     else:
@@ -230,11 +226,10 @@ def delete_document(document_id):
     
     return redirect(url_for("main.doc"))
 
+
 @main.route("/admin/delete-meeting/<int:meeting_id>")
 @login_as_admin_required
 def delete_meeting(meeting_id):
-    from .data_handler import delete_meeting_and_documents
-    
     success = delete_meeting_and_documents(meeting_id)
     if success:
         flash("Meeting and associated documents deleted successfully.", "success")
@@ -243,11 +238,10 @@ def delete_meeting(meeting_id):
     
     return redirect(url_for("main.admin"))
 
+
 @main.route("/admin/manage-meeting/<int:meeting_id>", methods=["GET", "POST"])
 @login_as_admin_required
 def manage_meeting(meeting_id):
-    from .data_handler import get_document_requires, set_document_require, remove_document_require
-    
     meetings = fetch_meetings()
     meeting = next((m for m in meetings if m.id == meeting_id), None)
     if not meeting:
@@ -282,6 +276,8 @@ def manage_meeting(meeting_id):
         **form_data,
         current_requires=current_requires
     )
+
+
 @main.route("/admin/mail")
 @login_as_admin_required
 def mail ():

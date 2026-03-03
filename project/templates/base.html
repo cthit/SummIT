@@ -13,21 +13,24 @@
       <a href="{{ url_for('main.index') }}">
         Home
       </a>
-      <a href="{{ url_for('main.doc') }}">
-        Documents
-      </a>
-      <a href="{{ url_for('main.admin') }}">
-        Admin
-      </a>
-      <a href="{{ url_for('main.profile') }}">
-        Profile
-      </a>
-      <a href="{{ url_for('auth.login') }}">
-        Login
-      </a>
-      <a href="{{ url_for('auth.logout') }}">
-        Logout
-      </a>
+      {% if g.user %}
+        <a href="{{ url_for('main.doc') }}">
+          Documents
+        </a>
+        <a href="{{ url_for('main.admin') }}">
+          Admin
+        </a>
+        <a href="{{ url_for('main.profile') }}">
+          Profile
+        </a>
+        <a href="{{ url_for('auth.logout') }}">
+          Logout
+        </a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">
+          Login
+        </a>
+      {% endif %}
     </div>
     {% block content %} {% endblock %}
   </body>
