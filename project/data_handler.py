@@ -6,7 +6,8 @@ from pathlib import Path
 import os
 import hashlib
 
-UPLOAD_BASE: Path = Path("/")/"data"/"uploads"
+UPLOAD_BASE: Path = Path("/") / "data" / "uploads"
+
 
 class LP(IntEnum):
     LP1 = 1
@@ -15,9 +16,11 @@ class LP(IntEnum):
     LP4 = 4
     SUMMER = 5
 
+
 class DocumentType(StrEnum):
     MEETING = "meeting"
     DIVISION = "division"
+
 
 class MeetingDocumentTypes(StrEnum):
     MOTION = "motion"
@@ -27,6 +30,7 @@ class MeetingDocumentTypes(StrEnum):
     NOMINERINGAR = "nomineringar"
     OTHER = "other"
 
+
 class DivisionDocumentTypes(StrEnum):
     VERKSAMHETSRAPPORT = "verksamhetsrapport"
     VERKSAMETSBERATTELSE = "veksamhetsberattelse"
@@ -34,11 +38,13 @@ class DivisionDocumentTypes(StrEnum):
     EKONOMISKBERATTELSE = "ekonomiskberattelse"
     BUDGET = "budget"
 
+
 @dataclass(frozen=True, slots=True)
 class StudyPeriod:
     id: int
     year: int
     lp: LP
+
 
 @dataclass(frozen=True, slots=True)
 class Meeting:
@@ -46,9 +52,11 @@ class Meeting:
     date: datetime.date
     study_period: StudyPeriod
 
+
 @dataclass(frozen=True, slots=True)
 class DocumentOwner:
     _id: str
+
 
 @dataclass(frozen=True, slots=True)
 class Document:
@@ -59,7 +67,9 @@ class Document:
     uploaded: datetime.datetime
 
 
-def create_meeting(meeting_date: datetime.date, study_period: StudyPeriod) -> Meeting | None:
+def create_meeting(
+    meeting_date: datetime.date, study_period: StudyPeriod
+) -> Meeting | None:
     conn = get_db()
     try:
         with conn.cursor() as cur:
@@ -98,7 +108,8 @@ def fetch_meetings() -> list[Meeting]:
         )
         meeting_data = cur.fetchall()
     return list(map(lambda x: Meeting(*x[:2], StudyPeriod(*x[2:])), meeting_data))
-    
+
+
 def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
     conn = get_db()
     with conn.cursor() as cur:
@@ -114,6 +125,7 @@ def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
         if not row:
             return None
         return StudyPeriod(id=row[0], year=row[1], lp=LP(row[2]))
+
 
 def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
     conn = get_db()
@@ -140,12 +152,21 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
     except Exception as e:
         print(e)
         conn.rollback()
-        return None 
+        return None
 
-def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwner, meeting_id: int, document_type: DocumentType, document_subtype: str, is_group: bool = False) -> Document:
+
+def upload_document(
+    the_file: bytes,
+    file_name: str,
+    document_owner: DocumentOwner,
+    meeting_id: int,
+    document_type: DocumentType,
+    document_subtype: str,
+    is_group: bool = False,
+) -> Document:
     conn = get_db()
     file_hash = hashlib.md5(the_file)
-    file_path = UPLOAD_BASE/(f"{file_hash.hexdigest()}_{file_name}")
+    file_path = UPLOAD_BASE / (f"{file_hash.hexdigest()}_{file_name}")
 
     create_document_owner(document_owner, is_group)
 
@@ -160,7 +181,7 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                 (file_name, document_owner._id, str(file_path)),
             )
             document_id, timestamp = cur.fetchone()
-            
+
             if document_type == DocumentType.MEETING:
                 # Use provided subtype
                 cur.execute(
@@ -168,11 +189,11 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                     INSERT INTO MeetingDocumentTypes (type_name) VALUES (%s)
                     ON CONFLICT (type_name) DO NOTHING;
                     """,
-                    (document_subtype,)
+                    (document_subtype,),
                 )
                 cur.execute(
                     "SELECT type_id FROM MeetingDocumentTypes WHERE type_name = %s;",
-                    (document_subtype,)
+                    (document_subtype,),
                 )
                 type_id = cur.fetchone()[0]
                 cur.execute(
@@ -180,13 +201,13 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                     INSERT INTO MeetingDocuments (document_id, type_id, meeting_id)
                     VALUES (%s, %s, %s);
                     """,
-                    (document_id, type_id, meeting_id)
+                    (document_id, type_id, meeting_id),
                 )
             else:  # DocumentType.DIVISION
                 # Get study_period_id from meeting
                 cur.execute(
                     "SELECT study_period_id FROM Meetings WHERE meeting_id = %s;",
-                    (meeting_id,)
+                    (meeting_id,),
                 )
                 study_period_id = cur.fetchone()[0]
                 # Use provided subtype
@@ -195,11 +216,11 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                     INSERT INTO DivisionDocumentTypes (type_name) VALUES (%s)
                     ON CONFLICT (type_name) DO NOTHING;
                     """,
-                    (document_subtype,)
+                    (document_subtype,),
                 )
                 cur.execute(
                     "SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;",
-                    (document_subtype,)
+                    (document_subtype,),
                 )
                 type_id = cur.fetchone()[0]
                 cur.execute(
@@ -207,24 +228,26 @@ def upload_document(the_file: bytes, file_name: str, document_owner: DocumentOwn
                     INSERT INTO DivisionDocuments (document_id, type_id, study_period_id)
                     VALUES (%s, %s, %s);
                     """,
-                    (document_id, type_id, study_period_id)
+                    (document_id, type_id, study_period_id),
                 )
-        
+
         document = Document(
-            _id = document_id,
-            name = file_name,
-            owner = document_owner,
-            file_path = file_path,
-            uploaded = timestamp,
+            _id=document_id,
+            name=file_name,
+            owner=document_owner,
+            file_path=file_path,
+            uploaded=timestamp,
         )
         if file_path.is_file():
             raise Exception("File already exists...?")
-        with file_path.open("wb") as f: f.write(the_file)
+        with file_path.open("wb") as f:
+            f.write(the_file)
         conn.commit()
     except:
         conn.rollback()
         raise
     return document
+
 
 def create_document_owner(document_owner: DocumentOwner, is_group: bool = False):
     conn = get_db()
@@ -260,10 +283,13 @@ def create_document_owner(document_owner: DocumentOwner, is_group: bool = False)
         conn.rollback()
         raise
 
-def fetch_documents_for_meeting(meeting_id: int, user_id: str, group_ids: list[str]) -> dict:
+
+def fetch_documents_for_meeting(
+    meeting_id: int, user_id: str, group_ids: list[str]
+) -> dict:
     conn = get_db()
     all_owner_ids = [user_id] + group_ids
-    
+
     with conn.cursor() as cur:
         # Fetch meeting documents
         cur.execute(
@@ -275,10 +301,10 @@ def fetch_documents_for_meeting(meeting_id: int, user_id: str, group_ids: list[s
             WHERE md.meeting_id = %s AND d.gamma_owner_id = ANY(%s)
             ORDER BY d.uploaded DESC;
             """,
-            (meeting_id, all_owner_ids)
+            (meeting_id, all_owner_ids),
         )
         meeting_docs = cur.fetchall()
-        
+
         # Fetch division documents for the meeting's study period
         cur.execute(
             """
@@ -290,23 +316,22 @@ def fetch_documents_for_meeting(meeting_id: int, user_id: str, group_ids: list[s
             WHERE m.meeting_id = %s AND d.gamma_owner_id = ANY(%s)
             ORDER BY d.uploaded DESC;
             """,
-            (meeting_id, all_owner_ids)
+            (meeting_id, all_owner_ids),
         )
         division_docs = cur.fetchall()
-    
+
     # Group documents by owner
     documents_by_owner = {}
     for doc in meeting_docs + division_docs:
         doc_id, doc_name, owner_id, doc_type = doc
         if owner_id not in documents_by_owner:
             documents_by_owner[owner_id] = []
-        documents_by_owner[owner_id].append({
-            "id": doc_id,
-            "name": doc_name,
-            "type": doc_type
-        })
-    
+        documents_by_owner[owner_id].append(
+            {"id": doc_id, "name": doc_name, "type": doc_type}
+        )
+
     return documents_by_owner
+
 
 def fetch_document_by_id(document_id: int, allowed_owner_ids: list[str]) -> dict | None:
     conn = get_db()
@@ -317,19 +342,15 @@ def fetch_document_by_id(document_id: int, allowed_owner_ids: list[str]) -> dict
             FROM Documents
             WHERE document_id = %s AND gamma_owner_id = ANY(%s);
             """,
-            (document_id, allowed_owner_ids)
+            (document_id, allowed_owner_ids),
         )
         row = cur.fetchone()
-    
+
     if not row:
         return None
-    
-    return {
-        "id": row[0],
-        "name": row[1],
-        "file_path": row[2],
-        "owner_id": row[3]
-    }
+
+    return {"id": row[0], "name": row[1], "file_path": row[2], "owner_id": row[3]}
+
 
 def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
     conn = get_db()
@@ -338,40 +359,39 @@ def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
             # Get file path first
             cur.execute(
                 "SELECT file_path FROM Documents WHERE document_id = %s AND gamma_owner_id = ANY(%s);",
-                (document_id, allowed_owner_ids)
+                (document_id, allowed_owner_ids),
             )
             row = cur.fetchone()
             if not row:
                 return False
-            
+
             file_path = Path(row[0])
-            
+
             # Delete from MeetingDocuments or DivisionDocuments first (foreign key constraint)
             cur.execute(
-                "DELETE FROM MeetingDocuments WHERE document_id = %s;",
-                (document_id,)
+                "DELETE FROM MeetingDocuments WHERE document_id = %s;", (document_id,)
             )
             cur.execute(
-                "DELETE FROM DivisionDocuments WHERE document_id = %s;",
-                (document_id,)
+                "DELETE FROM DivisionDocuments WHERE document_id = %s;", (document_id,)
             )
-            
+
             # Now delete from Documents
             cur.execute(
                 "DELETE FROM Documents WHERE document_id = %s AND gamma_owner_id = ANY(%s);",
-                (document_id, allowed_owner_ids)
+                (document_id, allowed_owner_ids),
             )
-            
+
             # Delete physical file
             if file_path.is_file():
                 file_path.unlink()
-        
+
         conn.commit()
         return True
     except Exception as e:
         print(e)
         conn.rollback()
         return False
+
 
 def delete_meeting_and_documents(meeting_id: int) -> bool:
     conn = get_db()
@@ -380,43 +400,50 @@ def delete_meeting_and_documents(meeting_id: int) -> bool:
             # Get all meeting documents
             cur.execute(
                 "SELECT d.document_id, d.file_path FROM Documents d JOIN MeetingDocuments md ON d.document_id = md.document_id WHERE md.meeting_id = %s;",
-                (meeting_id,)
+                (meeting_id,),
             )
             meeting_doc_rows = cur.fetchall()
-            
+
             # Get all division documents (via study_period_id)
             cur.execute(
                 "SELECT d.document_id, d.file_path FROM Documents d JOIN DivisionDocuments dd ON d.document_id = dd.document_id JOIN Meetings m ON dd.study_period_id = m.study_period_id WHERE m.meeting_id = %s;",
-                (meeting_id,)
+                (meeting_id,),
             )
             division_doc_rows = cur.fetchall()
-            
+
             # Delete meeting documents
             for doc_id, file_path in meeting_doc_rows:
-                cur.execute("DELETE FROM MeetingDocuments WHERE document_id = %s;", (doc_id,))
+                cur.execute(
+                    "DELETE FROM MeetingDocuments WHERE document_id = %s;", (doc_id,)
+                )
                 cur.execute("DELETE FROM Documents WHERE document_id = %s;", (doc_id,))
                 if file_path and Path(file_path).is_file():
                     Path(file_path).unlink()
-            
+
             # Delete division documents
             for doc_id, file_path in division_doc_rows:
-                cur.execute("DELETE FROM DivisionDocuments WHERE document_id = %s;", (doc_id,))
+                cur.execute(
+                    "DELETE FROM DivisionDocuments WHERE document_id = %s;", (doc_id,)
+                )
                 cur.execute("DELETE FROM Documents WHERE document_id = %s;", (doc_id,))
                 if file_path and Path(file_path).is_file():
                     Path(file_path).unlink()
-            
+
             # Delete document requires
-            cur.execute("DELETE FROM DocumentRequire WHERE meeting_id = %s;", (meeting_id,))
-            
+            cur.execute(
+                "DELETE FROM DocumentRequire WHERE meeting_id = %s;", (meeting_id,)
+            )
+
             # Delete meeting
             cur.execute("DELETE FROM Meetings WHERE meeting_id = %s;", (meeting_id,))
-        
+
         conn.commit()
         return True
     except Exception as e:
         print(e)
         conn.rollback()
         return False
+
 
 def get_document_requires(meeting_id: int) -> dict:
     conn = get_db()
@@ -428,10 +455,10 @@ def get_document_requires(meeting_id: int) -> dict:
             JOIN DivisionDocumentTypes dt ON dr.document_type_id = dt.type_id
             WHERE dr.meeting_id = %s;
             """,
-            (meeting_id,)
+            (meeting_id,),
         )
         rows = cur.fetchall()
-    
+
     # Return dict: {group_id: [doc_type1, doc_type2, ...]}
     result = {}
     for doc_type, group_id in rows:
@@ -440,6 +467,7 @@ def get_document_requires(meeting_id: int) -> dict:
         result[group_id].append(doc_type)
     return result
 
+
 def set_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> bool:
     conn = get_db()
     try:
@@ -447,27 +475,33 @@ def set_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> 
             # Ensure document owner exists
             cur.execute(
                 "INSERT INTO DocumentOwners (gamma_owner_id) VALUES (%s) ON CONFLICT DO NOTHING;",
-                (group_id,)
+                (group_id,),
             )
             cur.execute(
                 "INSERT INTO Committees (gamma_group_id) VALUES (%s) ON CONFLICT DO NOTHING;",
-                (group_id,)
+                (group_id,),
             )
-            
+
             # Get type_id
-            cur.execute("SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;", (doc_type_name,))
+            cur.execute(
+                "SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;",
+                (doc_type_name,),
+            )
             row = cur.fetchone()
             if not row:
                 # Create the type if it doesn't exist
-                cur.execute("INSERT INTO DivisionDocumentTypes (type_name) VALUES (%s) RETURNING type_id;", (doc_type_name,))
+                cur.execute(
+                    "INSERT INTO DivisionDocumentTypes (type_name) VALUES (%s) RETURNING type_id;",
+                    (doc_type_name,),
+                )
                 row = cur.fetchone()
-            
+
             type_id = row[0]
-            
+
             # Insert requirement
             cur.execute(
                 "INSERT INTO DocumentRequire (document_type_id, meeting_id, gamma_owner_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;",
-                (type_id, meeting_id, group_id)
+                (type_id, meeting_id, group_id),
             )
         conn.commit()
         return True
@@ -476,22 +510,26 @@ def set_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> 
         conn.rollback()
         return False
 
+
 def remove_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> bool:
     conn = get_db()
     try:
         with conn.cursor() as cur:
             # Get type_id
-            cur.execute("SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;", (doc_type_name,))
+            cur.execute(
+                "SELECT type_id FROM DivisionDocumentTypes WHERE type_name = %s;",
+                (doc_type_name,),
+            )
             row = cur.fetchone()
             if not row:
                 return False
-            
+
             type_id = row[0]
-            
+
             # Delete requirement
             cur.execute(
                 "DELETE FROM DocumentRequire WHERE document_type_id = %s AND meeting_id = %s AND gamma_owner_id = %s;",
-                (type_id, meeting_id, group_id)
+                (type_id, meeting_id, group_id),
             )
         conn.commit()
         return True

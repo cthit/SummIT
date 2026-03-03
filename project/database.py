@@ -4,6 +4,7 @@ import os
 from flask import g, Flask
 import atexit
 
+
 class Database:
     """Database connection pool manager"""
 

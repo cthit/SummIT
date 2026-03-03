@@ -170,7 +170,11 @@ def callback():
                 else {
                     "id": f"dev-group-id-{args}",
                     "name": args,
-                    "prettyName": "MötespresidIT" if args == "motespresidit" else ("styrIT" if args == "styrit" else args.upper()),
+                    "prettyName": (
+                        "MötespresidIT"
+                        if args == "motespresidit"
+                        else ("styrIT" if args == "styrit" else args.upper())
+                    ),
                     "post": "Member",
                 }
             )
