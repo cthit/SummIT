@@ -1,0 +1,15 @@
+Dear {group_name},
+
+This is to inform you that your duties for the current period are coming to an end.
+
+Please ensure all outstanding tasks are completed:
+{task_list}
+
+For any questions or handover information, please contact:
+- Secretary: {secretary_email}
+- {board_display_name}: {board_email}
+
+Thank you for your service.
+
+Best regards,
+{secretary_display_name}

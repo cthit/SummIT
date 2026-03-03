@@ -1,0 +1,18 @@
+Dear {group_name},
+
+This is a reminder that the deadline for uploading documents for the meeting on {meeting_date} is approaching.
+
+Deadline: {deadline_date} at {deadline_time}
+
+You have not yet uploaded the following required documents:
+{task_list}
+
+Please upload your documents as soon as possible at: {frontend_url}
+Your group code: {group_code}
+
+If you are experiencing difficulties or need assistance, please contact:
+- Secretary: {secretary_email}
+- {board_display_name}: {board_email}
+
+Best regards,
+{secretary_display_name}

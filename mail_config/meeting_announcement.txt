@@ -1,0 +1,20 @@
+Dear {group_name},
+
+This is a reminder that you have documents to upload for the upcoming meeting on {meeting_date}.
+
+Deadline: {deadline_date} at {deadline_time}
+
+Required documents:
+{task_list}
+
+Please upload your documents at: {frontend_url}
+Your group code: {group_code}
+
+Document template: {template_url}
+
+If you have any questions, please contact:
+- Secretary: {secretary_email}
+- {board_display_name}: {board_email}
+
+Best regards,
+{secretary_display_name}

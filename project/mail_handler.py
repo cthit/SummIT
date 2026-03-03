@@ -24,10 +24,14 @@ def send_mail(to: str, subject: str, body: str):
     Raises:
         requests.exceptions.RequestException: If request fails
     """
-    from_address: str = "admin@chalmers.it"
     response = requests.post(
         f"{GOTIFY_URL.rstrip('/')}/mail",
-        json={"to": to, "from": from_address, "subject": subject, "body": body},
+        json={
+            "to": to,
+            "from": "admin@chalmers.it",
+            "subject": subject,
+            "body": body,
+        },
         headers={
             "Authorization": f"pre-shared: {GOTIFY_KEY}",
             "Content-Type": "application/json",
