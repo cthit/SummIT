@@ -11,6 +11,8 @@ services:
       summit_db:
         condition: service_healthy
     restart: on-failure
+    environment:
+      ACTIVE_GROUPS_WHITELIST: 9635a397-b281-42fd-9e45-7508730a0174
 
   summit_db:
     build: summit_database

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple
 
-gamma_dataclass = dataclass(frozen=True, slots=True, hash=True)
+gamma_dataclass = dataclass(frozen=True, slots=True)
 
 
 @gamma_dataclass

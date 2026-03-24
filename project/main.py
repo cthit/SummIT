@@ -11,6 +11,7 @@ from flask import (
     jsonify,
 )
 from datetime import date
+import os
 from .auth import login_required, login_as_admin_required
 from .data_handler import (
     LP,
@@ -31,6 +32,14 @@ from .data_handler import (
     delete_meeting_and_documents,
     remove_document_require,
 )
+from .gamma import GammaService
+
+
+_FALLBACK_GROUPS = [
+    {"id": "dev-group-id-styrit", "name": "styrIT"},
+    {"id": "dev-group-id-digit", "name": "digIT"},
+    {"id": "dev-group-id-devit", "name": "DevIT"},
+]
 
 
 def _meeting_label(meeting):
@@ -40,12 +49,24 @@ def _meeting_label(meeting):
 
 
 def _get_groups():
-    return [
-        {"id": "dev-group-id-styrit", "name": "styrIT"},
-        {"id": "dev-group-id-digit", "name": "digIT"},
-        {"id": "dev-group-id-devit", "name": "DevIT"},
-    ]
+    whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
+    whitelist = {g.strip() for g in whitelist_str.split(",") if g.strip()} if whitelist_str else None
+    
+    if not whitelist:
+        return _FALLBACK_GROUPS
+    
+    try:
+        # Get active groups from service and apply whitelist in main.
+        all_groups = GammaService.get_all_active_groups()
+        groups = [g for g in all_groups if g.get("id") in whitelist]
 
+        if groups:
+            return groups
+    except Exception as exc:
+        print(f"Failed to fetch groups from Gamma: {exc}")
+    
+    return _FALLBACK_GROUPS
+ 
 
 def _get_meeting_form_data():
     return {
