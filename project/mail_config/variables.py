@@ -35,7 +35,7 @@ def get_static_values():
         "frontend_url": os.getenv("FRONTEND_URL", "https://summit.chalmers.it"),
         "template_url": os.getenv("TEMPLATE_URL", "https://overleaf.com/read/template"),
         "secretary_email": os.getenv("SECRETARY_EMAIL", "motespresidit@chalmers.it"),
-        "secretary_display_name": os.getenv("SECRETARY_DISPLAT_NAME", "MötespresidIT"),
+        "secretary_display_name": os.getenv("SECRETARY_DISPLAY_NAME", "MötespresidIT"),
         "board_display_name": os.getenv("BOARD_DISPLAY_NAME", "styrIT Board"),
         "board_email": os.getenv("BOARD_EMAIL", "board@chalmers.it"),
     }
