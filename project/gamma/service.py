@@ -17,15 +17,25 @@ def gamma_url() -> str:
     return os.getenv("GAMMA_ROOT_URL", "https://auth.chalmers.it").rstrip("/")
 
 
+def _gamma_hostname() -> str:
+    """Extract hostname from gamma_url, stripping the https:// scheme."""
+    url = gamma_url()
+    return url.replace("https://", "").replace("http://", "")
+
+
 def _gamma_auth_header() -> str:
-    return os.getenv("GAMMA_INFO_AUTH_HEADER", "")
+    header = os.getenv("GAMMA_INFO_AUTH_HEADER", "")
+    if not header:
+        raise Exception(f"Gamma info auth header empty")
+    else:
+        return header
 
 
 class GammaService:
     _active_group_types = os.getenv("ACTIVE_GROUP_TYPES", "committee").split(",")
     _https = HTTPSConnectionPool(
-        host=gamma_url(),
-        assert_hostname=gamma_url().replace("https://", "").rstrip("/"),
+        host=_gamma_hostname(),
+        assert_hostname=_gamma_hostname(),
         headers={"Authorization": _gamma_auth_header()},
     )
 

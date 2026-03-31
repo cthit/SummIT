@@ -42,7 +42,7 @@
     <tbody>
       {% for group in groups %}
       <tr>
-        <td><strong>{{ group.name }}</strong></td>
+        <td><strong>{{ group.pretty_name }}</strong></td>
         {% for doc_type_value, doc_type_name in division_doc_types %}
         <td>
           <input type="checkbox" 

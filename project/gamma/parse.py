@@ -20,32 +20,50 @@ from .types import (
 
 
 def parse_user(data: dict) -> GammaUser:
-    return GammaUser(**data)
+    return GammaUser(
+        id=data["id"],
+        nick=data["nick"],
+        first_name=data["firstName"],
+        last_name=data["lastName"],
+        acceptance_year=data["acceptanceYear"],
+    )
 
 
 def parse_post(data: dict) -> GammaPost:
-    return GammaPost(**data)
+    return GammaPost(
+        id=data["id"],
+        sv_name=data["svName"],
+        en_name=data["enName"],
+        email_prefix=data.get("emailPrefix", ""),
+    )
 
 
 def parse_group_member(data: dict) -> GammaGroupMember:
     return GammaGroupMember(
         user=parse_user(data["user"]),
         post=parse_post(data["post"]),
-        unofficial_post_name=data.get("unofficial_post_name"),
+        unofficial_post_name=data.get("unofficialPostName"),
     )
 
 
 def parse_super_group(data: dict) -> GammaSuperGroup:
-    return GammaSuperGroup(**data)
+    return GammaSuperGroup(
+        id=data["id"],
+        name=data["name"],
+        pretty_name=data["prettyName"],
+        type=data["type"],
+        sv_description=data["svDescription"],
+        en_description=data["enDescription"],
+    )
 
 
 def parse_group(data: dict) -> GammaGroup:
-    members = data.get("group_members")
+    members = data.get("groupMembers")
     return GammaGroup(
         id=data["id"],
         name=data["name"],
-        pretty_name=data["pretty_name"],
-        super_group=parse_super_group(data["super_group"]),
+        pretty_name=data["prettyName"],
+        super_group=parse_super_group(data["superGroup"]),
         group_members=(
             tuple(parse_group_member(m) for m in members)
             if members is not None
@@ -70,10 +88,10 @@ def parse_user_info(data: dict) -> GammaUserInfo:
 
 def parse_supergroup_entry(data: dict) -> GammaSuperGroupEntry:
     return GammaSuperGroupEntry(
-        super_group=parse_super_group(data["super_group"]),
+        super_group=parse_super_group(data["superGroup"]),
         members=tuple(parse_group_member(m) for m in data.get("members", [])),
-        has_banner=data.get("has_banner", False),
-        has_avatar=data.get("has_avatar", False),
+        has_banner=data.get("hasBanner", False),
+        has_avatar=data.get("hasAvatar", False),
     )
 
 
@@ -81,6 +99,6 @@ def parse_supergroup_list_item(data: dict) -> GammaSuperGroupListItem:
     return GammaSuperGroupListItem(
         type=data["type"],
         super_groups=tuple(
-            parse_supergroup_entry(e) for e in data.get("super_groups", [])
+            parse_supergroup_entry(e) for e in data.get("superGroups", [])
         ),
     )

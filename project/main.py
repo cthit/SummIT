@@ -36,9 +36,9 @@ from .gamma import GammaService as gs
 
 
 _FALLBACK_GROUPS = [
-    {"id": "dev-group-id-styrit", "name": "styrIT"},
-    {"id": "dev-group-id-digit", "name": "digIT"},
-    {"id": "dev-group-id-devit", "name": "DevIT"},
+    ("dev-group-id-styrit", "styrit", "styrIT"),
+    ("dev-group-id-digit", "digit", "digIT"),
+    ("dev-group-id-devit", "devit", "DevIT"),
 ]
 
 
@@ -50,26 +50,41 @@ def _meeting_label(meeting):
 
 def _get_groups():
     whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
-    whitelist = {group.strip() for group in whitelist_str.split(",") if group.strip()} if whitelist_str else None
+    whitelist = {group_id.strip() for group_id in whitelist_str.split(",") if group_id.strip()} if whitelist_str else None
     
     if not whitelist:
         return _FALLBACK_GROUPS
     
     try:
-        return [group for group in gs.get_all_super_groups() if group.id in whitelist]
+        entries = gs.get_all_super_groups()
+        
+        if not entries:
+            print("Error: Gamma returned 0 super group entries")
+            raise ValueError("No super groups returned from Gamma blob endpoint")
+        
+        filtered_groups = [(entry.super_group.id, entry.super_group.name, entry.super_group.pretty_name) for entry in entries if entry.super_group.id in whitelist]
+        
+        if not filtered_groups:
+            available_ids = [entry.super_group.id for entry in entries]
+            print(f"Error: No groups matched whitelist. Available group IDs: {available_ids}")
+            raise ValueError("No matching groups found in whitelist")
+        
+        return filtered_groups
 
     except Exception as exc:
-        print(f"Failed to fetch groups from Gamma: {exc}")
+        print(f"Error: Failed to fetch groups from Gamma - {type(exc).__name__}: {exc}")
     
+    print("Using fallback groups")
     return _FALLBACK_GROUPS
  
 
 def _get_meeting_form_data():
+    groups = _get_groups()
     return {
         "years": list(range(date.today().year - 1, date.today().year + 3)),
         "lps": [(lp.value, lp.name) for lp in LP],
         "current_year": date.today().year,
-        "groups": _get_groups(),
+        "groups": [{"id": group_id, "name": group_name, "pretty_name": group_pretty_name} for group_id, group_name, group_pretty_name in groups],
         "division_doc_types": [(dt.value, dt.name) for dt in DivisionDocumentTypes],
     }
 
