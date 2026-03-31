@@ -162,7 +162,7 @@ def upload_document(
     the_file: bytes,
     file_name: str,
     document_owner: DocumentOwner,
-    meeting_id: int,
+    meeting_id: int | None,
     document_type: DocumentType,
     document_subtype: str,
     is_group: bool = False,
@@ -206,7 +206,7 @@ def upload_document(
                     """,
                     (document_id, type_id, meeting_id),
                 )
-            else:  # DocumentType.DIVISION
+            elif document_type == DocumentType.DIVISION:
                 # Get study_period_id from meeting
                 cur.execute(
                     "SELECT study_period_id FROM Meetings WHERE meeting_id = %s;",
@@ -232,6 +232,27 @@ def upload_document(
                     VALUES (%s, %s, %s);
                     """,
                     (document_id, type_id, study_period_id),
+                )
+            elif document_type == DocumentType.LIBERATION:
+                # Liberation documents are not bound to any meeting or study period
+                cur.execute(
+                    """
+                    INSERT INTO LiberationDocumentTypes (type_name) VALUES (%s)
+                    ON CONFLICT (type_name) DO NOTHING;
+                    """,
+                    (document_subtype,),
+                )
+                cur.execute(
+                    "SELECT type_id FROM LiberationDocumentTypes WHERE type_name = %s;",
+                    (document_subtype,),
+                )
+                type_id = cur.fetchone()[0]
+                cur.execute(
+                    """
+                    INSERT INTO LiberationDocuments (document_id, type_id)
+                    VALUES (%s, %s);
+                    """,
+                    (document_id, type_id),
                 )
 
         document = Document(
@@ -287,6 +308,40 @@ def create_document_owner(document_owner: DocumentOwner, is_group: bool = False)
         raise
 
 
+def fetch_liberation_documents(
+    user_id: str, group_ids: list[str]
+) -> dict:
+    """Fetch all liberation documents accessible to the user and their groups."""
+    conn = get_db()
+    all_owner_ids = [user_id] + group_ids
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT d.document_id, d.document_name, d.gamma_owner_id, ldt.type_name
+            FROM Documents d
+            JOIN LiberationDocuments ld ON d.document_id = ld.document_id
+            JOIN LiberationDocumentTypes ldt ON ld.type_id = ldt.type_id
+            WHERE d.gamma_owner_id = ANY(%s)
+            ORDER BY d.uploaded DESC;
+            """,
+            (all_owner_ids,),
+        )
+        liberation_docs = cur.fetchall()
+
+    # Group documents by owner
+    documents_by_owner = {}
+    for doc in liberation_docs:
+        doc_id, doc_name, owner_id, doc_type = doc
+        if owner_id not in documents_by_owner:
+            documents_by_owner[owner_id] = []
+        documents_by_owner[owner_id].append(
+            {"id": doc_id, "name": doc_name, "type": doc_type}
+        )
+
+    return documents_by_owner
+
+
 def fetch_documents_for_meeting(
     meeting_id: int, user_id: str, group_ids: list[str]
 ) -> dict:
@@ -323,9 +378,23 @@ def fetch_documents_for_meeting(
         )
         division_docs = cur.fetchall()
 
+        # Fetch liberation documents (not tied to any meeting or study period)
+        cur.execute(
+            """
+            SELECT d.document_id, d.document_name, d.gamma_owner_id, ldt.type_name
+            FROM Documents d
+            JOIN LiberationDocuments ld ON d.document_id = ld.document_id
+            JOIN LiberationDocumentTypes ldt ON ld.type_id = ldt.type_id
+            WHERE d.gamma_owner_id = ANY(%s)
+            ORDER BY d.uploaded DESC;
+            """,
+            (all_owner_ids,),
+        )
+        liberation_docs = cur.fetchall()
+
     # Group documents by owner
     documents_by_owner = {}
-    for doc in meeting_docs + division_docs:
+    for doc in meeting_docs + division_docs + liberation_docs:
         doc_id, doc_name, owner_id, doc_type = doc
         if owner_id not in documents_by_owner:
             documents_by_owner[owner_id] = []

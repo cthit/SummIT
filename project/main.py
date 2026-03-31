@@ -25,6 +25,8 @@ from .data_handler import (
     DocumentType,
     fetch_documents_for_meeting,
     DivisionDocumentTypes,
+    MeetingDocumentTypes,
+    LiberationDocumentTypes,
     get_document_requires,
     set_document_require,
     fetch_document_by_id,
@@ -214,6 +216,9 @@ def document_upload():
             meetings=meetings,
             selected_meeting=selected_meeting,
             user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
         )
 
     uploaded_file = request.files.get("file")
@@ -223,28 +228,49 @@ def document_upload():
     document_subtype_str = (
         request.form.get("meeting_document_subtype")
         if document_type_str == "meeting"
-        else request.form.get("division_document_subtype")
+        else (request.form.get("liberation_document_subtype")
+              if document_type_str == "liberation"
+              else request.form.get("division_document_subtype"))
     )
 
     if not uploaded_file:
         flash("No file selected.", "error")
         meetings = fetch_meetings()
-        return render_template("upload.html", meetings=meetings, user=g.user)
-    if not meeting_id:
+        return render_template(
+            "upload.html", 
+            meetings=meetings, 
+            user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
+        )
+    
+    # Meeting is only required for meeting and division documents
+    if document_type_str != "liberation" and not meeting_id:
         flash("Please select a meeting.", "error")
         meetings = fetch_meetings()
         return render_template(
-            "upload.html", meetings=meetings, selected_meeting=None, user=g.user
+            "upload.html", 
+            meetings=meetings, 
+            selected_meeting=None, 
+            user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
         )
+    
     if not owner_id:
         flash("Please select who to upload as.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
         return render_template(
             "upload.html",
             meetings=meetings,
             selected_meeting=selected_meeting,
             user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
         )
 
     try:
@@ -252,23 +278,59 @@ def document_upload():
     except ValueError:
         flash("Please select a document type.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
         return render_template(
             "upload.html",
             meetings=meetings,
             selected_meeting=selected_meeting,
             user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
+        )
+
+    # Validate that personal (self) uploads are only meeting documents
+    if owner_id == "self" and document_type != DocumentType.MEETING:
+        flash("You can only upload meeting documents as yourself.", "error")
+        meetings = fetch_meetings()
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        return render_template(
+            "upload.html",
+            meetings=meetings,
+            selected_meeting=selected_meeting,
+            user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
+        )
+
+    # Validate that personal (self) uploads are only motion or other subtypes
+    if owner_id == "self" and document_subtype_str not in ["motion", "other"]:
+        flash("You can only upload motions or other documents as yourself.", "error")
+        meetings = fetch_meetings()
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        return render_template(
+            "upload.html",
+            meetings=meetings,
+            selected_meeting=selected_meeting,
+            user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
         )
 
     if not document_subtype_str:
         flash("Please select a document subtype.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None)
+        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
         return render_template(
             "upload.html",
             meetings=meetings,
             selected_meeting=selected_meeting,
             user=g.user,
+            meeting_doc_types=MeetingDocumentTypes,
+            division_doc_types=DivisionDocumentTypes,
+            liberation_doc_types=LiberationDocumentTypes,
         )
 
     # Determine the actual owner ID (self or group)
@@ -283,7 +345,7 @@ def document_upload():
         uploaded_file.stream.read(),
         uploaded_file.filename,
         DocumentOwner(actual_owner_id),
-        meeting_id,
+        meeting_id if document_type != DocumentType.LIBERATION else None,
         document_type,
         document_subtype_str,
         is_group,

@@ -2,30 +2,31 @@
 
 <h1>Upload File</h1>
 
-<h2 class="inline-display">Choose meeting:</h2>
-<form method="get" class="inline-display">
-  <select
-    id="meetingSelect"
-    name="meeting_id"
-    onchange="if (this.value) this.form.submit();"
-  >
-    <option value="">Select a meeting...</option>
-    {% for meeting in meetings %}
-    <option
-      value="{{ meeting.id }}"
-      {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
+<div id="meetingSection">
+  <h2 class="inline-display">Choose meeting:</h2>
+  <form method="get" class="inline-display">
+    <select
+      id="meetingSelect"
+      name="meeting_id"
+      onchange="if (this.value) this.form.submit();"
     >
-      {{ meeting.date }}
-      {% if meeting.study_period.lp|int != 5 %}
-        Study Period {{ meeting.study_period.lp|int }}
-      {% else %}
-        Summer
-      {% endif %}
-    </option>
-    {% endfor %}
-  </select>
-</form>
-
+      <option value="">Select a meeting...</option>
+      {% for meeting in meetings %}
+      <option
+        value="{{ meeting.id }}"
+        {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
+      >
+        {{ meeting.date }}
+        {% if meeting.study_period.lp|int != 5 %}
+          Study Period {{ meeting.study_period.lp|int }}
+        {% else %}
+          Summer
+        {% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
 
 <form id="uploadForm" action="/documents/upload" method="post" enctype="multipart/form-data"
   {% if not selected_meeting %}class="hidden"{% endif %}>
@@ -34,7 +35,7 @@
     {% endif %}
     <div>
       <label>Upload as:</label><br>
-      <select name="owner_id" required>
+      <select name="owner_id" required onchange="updateDocumentTypeOptions()">
         <option value="">Select owner...</option>
         <option value="self">Myself</option>
         {% for group in user.groups %}
@@ -45,29 +46,34 @@
     <div>
       <label>Document type:</label><br>
       <label><input type="radio" name="document_type" value="meeting" required onchange="toggleDocumentSubtype()"> Meeting Document</label><br>
-      <label><input type="radio" name="document_type" value="division" required onchange="toggleDocumentSubtype()"> Division Document</label>
+      <div id="division_option"><label><input type="radio" name="document_type" value="division" required onchange="toggleDocumentSubtype()"> Division Document</label><br></div>
+      <div id="liberation_option"><label><input type="radio" name="document_type" value="liberation" required onchange="toggleDocumentSubtype()"> Liberation Document</label></div>
     </div>
     <div id="meeting_subtype" class="hidden">
       <label>Meeting document type:</label><br>
       <select name="meeting_document_subtype">
         <option value="">Select type...</option>
-        <option value="motion">Motion</option>
-        <option value="proposition">Proposition</option>
-        <option value="dagordning">Dagordning</option>
-        <option value="interpellation">Interpellation</option>
-        <option value="nomineringar">Nomineringar</option>
-        <option value="other">Other</option>
+        {% for doc_type in meeting_doc_types %}
+        <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
+        {% endfor %}
       </select>
     </div>
     <div id="division_subtype" class="hidden">
       <label>Division document type:</label><br>
       <select name="division_document_subtype">
         <option value="">Select type...</option>
-        <option value="verksamhetsrapport">Verksamhetsrapport</option>
-        <option value="verksametsberattelse">Verksamhetsberättelse</option>
-        <option value="ekonomiskrapport">Ekonomiskrapport</option>
-        <option value="ekonomiskberattelse">Ekonomiskberättelse</option>
-        <option value="budget">Budget</option>
+        {% for doc_type in division_doc_types %}
+        <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="liberation_subtype" class="hidden">
+      <label>Liberation document type:</label><br>
+      <select name="liberation_document_subtype">
+        <option value="">Select type...</option>
+        {% for doc_type in liberation_doc_types %}
+        <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
+        {% endfor %}
       </select>
     </div>
     <label for="file">Choose file:</label>
@@ -77,32 +83,104 @@
 </form>
 
 <script>
+function updateDocumentTypeOptions() {
+  const ownerSelect = document.querySelector('select[name="owner_id"]');
+  const divisionOption = document.getElementById('division_option');
+  const liberationOption = document.getElementById('liberation_option');
+  const meetingSubtypeDiv = document.getElementById('meeting_subtype');
+  const isSelf = ownerSelect.value === 'self';
+  
+  if (isSelf) {
+    // Only allow meeting documents for self
+    divisionOption.style.display = 'none';
+    liberationOption.style.display = 'none';
+    document.querySelector('input[name="document_type"][value="division"]').checked = false;
+    document.querySelector('input[name="document_type"][value="liberation"]').checked = false;
+    document.querySelector('input[name="document_type"][value="division"]').required = false;
+    document.querySelector('input[name="document_type"][value="liberation"]').required = false;
+    
+    // Filter meeting subtypes to only motion and other
+    filterMeetingSubtypes(true);
+  } else {
+    // Show all document types for groups
+    divisionOption.style.display = 'block';
+    liberationOption.style.display = 'block';
+    document.querySelector('input[name="document_type"][value="division"]').required = true;
+    document.querySelector('input[name="document_type"][value="liberation"]').required = true;
+    
+    // Show all meeting subtypes for groups
+    filterMeetingSubtypes(false);
+  }
+  toggleDocumentSubtype();
+}
+
+function filterMeetingSubtypes(isSelf) {
+  const meetingSelect = document.querySelector('select[name="meeting_document_subtype"]');
+  const options = meetingSelect.querySelectorAll('option:not([value=""])');
+  
+  options.forEach(option => {
+    if (isSelf) {
+      if (option.value === 'motion' || option.value === 'other') {
+        option.style.display = 'block';
+      } else {
+        option.style.display = 'none';
+      }
+    } else {
+      option.style.display = 'block';
+    }
+  });
+}
+
 function toggleDocumentSubtype() {
   const meetingRadio = document.querySelector('input[name="document_type"][value="meeting"]');
   const divisionRadio = document.querySelector('input[name="document_type"][value="division"]');
+  const liberationRadio = document.querySelector('input[name="document_type"][value="liberation"]');
   const meetingSubtype = document.getElementById('meeting_subtype');
   const divisionSubtype = document.getElementById('division_subtype');
+  const liberationSubtype = document.getElementById('liberation_subtype');
   const meetingSelect = document.querySelector('select[name="meeting_document_subtype"]');
   const divisionSelect = document.querySelector('select[name="division_document_subtype"]');
+  const liberationSelect = document.querySelector('select[name="liberation_document_subtype"]');
   
   if (meetingRadio.checked) {
     meetingSubtype.style.display = 'block';
     divisionSubtype.style.display = 'none';
+    liberationSubtype.style.display = 'none';
     meetingSelect.required = true;
     divisionSelect.required = false;
+    liberationSelect.required = false;
   } else if (divisionRadio.checked) {
     meetingSubtype.style.display = 'none';
     divisionSubtype.style.display = 'block';
+    liberationSubtype.style.display = 'none';
     meetingSelect.required = false;
     divisionSelect.required = true;
+    liberationSelect.required = false;
+  } else if (liberationRadio.checked) {
+    meetingSubtype.style.display = 'none';
+    divisionSubtype.style.display = 'none';
+    liberationSubtype.style.display = 'block';
+    meetingSelect.required = false;
+    divisionSelect.required = false;
+    liberationSelect.required = true;
   }
 }
 
 window.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('uploadForm');
-  if (form && form.style.display !== 'none') {
+  const meetingSection = document.getElementById('meetingSection');
+  
+  // Show upload form if meeting is already selected (after page reload)
+  if (form && form.className !== 'hidden' && meetingSection) {
+    form.style.display = 'block';
+  }
+  
+  if (form) {
     form.reset();
   }
+  
+  // Initialize document type options based on owner
+  updateDocumentTypeOptions();
 });
 </script>
 
