@@ -52,7 +52,7 @@ function loadMeetingRequirements() {
       html += '</tr></thead><tbody>';
       
       data.groups.forEach(group => {
-        html += `<tr><td><strong>${group.name}</strong></td>`;
+        html += `<tr><td><strong>${group.pretty_name}</strong></td>`;
         data.doc_types.forEach(dt => {
           const checked = data.requires[group.id] && data.requires[group.id].includes(dt[0]) ? '✓' : '';
           html += `<td>${checked}</td>`;

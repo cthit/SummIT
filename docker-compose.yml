@@ -12,8 +12,7 @@ services:
         condition: service_healthy
     restart: on-failure
     environment:
-      ACTIVE_GROUPS_WHITELIST: b7ab170f-712d-40b0-9ed0-aca9bde07a61,9adae6f5-58cd-4c14-aa6f-caaecfe98402,dea3493e-66e4-44b2-a657-cb57a6840dab
-
+      ACTIVE_GROUPS_WHITELIST: b7ab170f-712d-40b0-9ed0-aca9bde07a61,9adae6f5-58cd-4c14-aa6f-caaecfe98402,dea3493e-66e4-44b2-a657-cb57a6840dab, 1b68e8da-2421-4c4c-b6e7-a78c9de440fc,      5ec2fd7e-118f-4753-8419-8b2e00196bfa, 2869d390-4f66-4b32-97fb-aed09c25d6d9, 0e9f791d-8151-4f73-834e-906d36323cfd, 75fe6bc1-3c4a-47a7-90d3-a759b6b54f1e, d5dd9e9e-e6d1-4814-a466-d826645fdbf0, 32da51ec-2854-4bc2-b19a-30dad5dcc501, 3b90c761-2179-4cf4-b5cd-07ae804667cb, 22748cb2-a2fa-46d7-a453-f3d99dd9f10c, 45432d44-0de4-4ed0-88ce-8cdf31b72f73, f80902c5-08ff-4f41-a0ff-14cf43e69852,
   summit_db:
     build: summit_database
     env_file: 

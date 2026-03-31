@@ -32,6 +32,16 @@ CREATE TABLE IF NOT EXISTS Documents (
     uploaded TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS LiberationDocumentTypes (
+    type_id SERIAL PRIMARY KEY,
+    type_name TEXT UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS LiberationDocuments (
+    document_id INTEGER PRIMARY KEY REFERENCES Documents(document_id),
+    type_id INTEGER REFERENCES LiberationDocumentTypes(type_id)
+);
+
 CREATE TABLE IF NOT EXISTS MeetingDocumentTypes (
     type_id SERIAL PRIMARY KEY,
     type_name TEXT UNIQUE

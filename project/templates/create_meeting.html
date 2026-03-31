@@ -34,8 +34,8 @@
     <thead>
       <tr>
         <th>Group</th>
-        {% for doc_type_value, doc_type_name in division_doc_types %}
-        <th>{{ doc_type_name }}</th>
+        {% for doc_type in division_doc_types %}
+        <th>{{ doc_type.name.replace('_', ' ').title() }}</th>
         {% endfor %}
       </tr>
     </thead>
@@ -43,11 +43,11 @@
       {% for group in groups %}
       <tr>
         <td><strong>{{ group.pretty_name }}</strong></td>
-        {% for doc_type_value, doc_type_name in division_doc_types %}
+        {% for doc_type in division_doc_types %}
         <td>
           <input type="checkbox" 
-                 name="{{ group.id }}_{{ doc_type_value }}"
-                 {% if group.id in current_requires and doc_type_value in current_requires[group.id] %}checked{% endif %}>
+                 name="{{ group.id }}_{{ doc_type.value }}"
+                 {% if group.id in current_requires and doc_type.value in current_requires[group.id] %}checked{% endif %}>
         </td>
         {% endfor %}
       </tr>

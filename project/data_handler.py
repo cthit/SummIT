@@ -20,6 +20,7 @@ class LP(IntEnum):
 class DocumentType(StrEnum):
     MEETING = "meeting"
     DIVISION = "division"
+    LIBERATION = "liberation"
 
 
 class MeetingDocumentTypes(StrEnum):
@@ -32,12 +33,14 @@ class MeetingDocumentTypes(StrEnum):
 
 
 class DivisionDocumentTypes(StrEnum):
-    VERKSAMHETSRAPPORT = "verksamhetsrapport"
-    VERKSAMETSBERATTELSE = "veksamhetsberattelse"
-    EKONOMISKRAPPORT = "ekonomiskrapport"
-    EKONOMISKBERATTELSE = "ekonomiskberattelse"
+    KVARTAL_VERKSAMHETSRAPPORT = "kvartal verksamhetsrapport"
+    KVARTAL_EKONOMISKRAPPORT = "kvartal ekonomiskrapport"
     BUDGET = "budget"
+    VERKSAMHETSPLAN = "verksamhetsplan"
 
+class LiberationDocumentTypes(StrEnum):
+    VERKSAMETSBERATTELSE = "veksamhetsberattelse"
+    EKONOMISKBERATTELSE = "ekonomiskberattelse"
 
 @dataclass(frozen=True, slots=True)
 class StudyPeriod:

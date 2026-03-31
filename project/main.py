@@ -85,7 +85,7 @@ def _get_meeting_form_data():
         "lps": [(lp.value, lp.name) for lp in LP],
         "current_year": date.today().year,
         "groups": [{"id": group_id, "name": group_name, "pretty_name": group_pretty_name} for group_id, group_name, group_pretty_name in groups],
-        "division_doc_types": [(dt.value, dt.name) for dt in DivisionDocumentTypes],
+        "division_doc_types": [document_type for document_type in DivisionDocumentTypes],
     }
 
 
@@ -149,7 +149,7 @@ def get_meeting_requirements_json(meeting_id):
     return jsonify(
         {
             "groups": form_data["groups"],
-            "doc_types": form_data["division_doc_types"],
+            "doc_types": [[dt.value, dt.name.replace("_", " ").title()] for dt in form_data["division_doc_types"]],
             "requires": get_document_requires(meeting_id),
         }
     )
