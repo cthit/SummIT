@@ -1,6 +1,5 @@
 import os
 from urllib3 import HTTPSConnectionPool
-from urllib.parse import urlparse
 import json
 from .types import (
     GammaGroup,
@@ -9,7 +8,6 @@ from .types import (
     GammaSuperGroupEntry,
 )
 from .parse import (
-    parse_client_group,
     parse_user_info,
     parse_supergroup_list_item,
 )
@@ -19,22 +17,15 @@ def gamma_url() -> str:
     return os.getenv("GAMMA_ROOT_URL", "https://auth.chalmers.it").rstrip("/")
 
 
-def gamma_host() -> str:
-    parsed = urlparse(gamma_url())
-    if parsed.netloc:
-        return parsed.netloc
-    return gamma_url().replace("https://", "").replace("http://", "").rstrip("/")
-
-
 def _gamma_auth_header() -> str:
-    return os.getenv("AUTH_HEADER", "")
+    return os.getenv("GAMMA_INFO_AUTH_HEADER", "")
 
 
 class GammaService:
     _active_group_types = os.getenv("ACTIVE_GROUP_TYPES", "committee").split(",")
     _https = HTTPSConnectionPool(
-        host=gamma_host(),
-        assert_hostname=gamma_host(),
+        host=gamma_url(),
+        assert_hostname=gamma_url().replace("https://", "").rstrip("/"),
         headers={"Authorization": _gamma_auth_header()},
     )
 
@@ -109,20 +100,3 @@ class GammaService:
             if entry.super_group.id == super_group_id:
                 return entry.super_group
         return None
-
-    @staticmethod
-    def get_all_active_groups() -> list[dict[str, str]]:
-        data = GammaService._gamma_get_request("/client/v1/groups")
-        groups: list[dict[str, str]] = []
-
-        for group in data:
-            try:
-                parsed = parse_client_group(group)
-            except Exception:
-                continue
-            if not GammaService.is_group_active(parsed):
-                continue
-            groups.append({"id": parsed.id, "name": parsed.pretty_name})
-
-        groups.sort(key=lambda g: g["name"].lower())
-        return groups

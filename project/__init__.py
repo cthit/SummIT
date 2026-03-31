@@ -1,7 +1,7 @@
-from flask import Flask
+from flask import Flask, g, session
 from dotenv import load_dotenv
 from authlib.integrations.flask_client import OAuth
-from .auth import auth as auth_blueprint
+from .auth import auth as auth_blueprint, set_user_in_g
 from .main import main as main_blueprint
 from .database import db
 import os
@@ -37,5 +37,10 @@ def create_app():
     app.register_blueprint(auth_blueprint)
 
     app.register_blueprint(main_blueprint)
+
+    @app.before_request
+    def before_request():
+        if session.get("authenticated"):
+            set_user_in_g()
 
     return app

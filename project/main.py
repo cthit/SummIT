@@ -32,7 +32,7 @@ from .data_handler import (
     delete_meeting_and_documents,
     remove_document_require,
 )
-from .gamma import GammaService
+from .gamma import GammaService as gs
 
 
 _FALLBACK_GROUPS = [
@@ -50,18 +50,14 @@ def _meeting_label(meeting):
 
 def _get_groups():
     whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
-    whitelist = {g.strip() for g in whitelist_str.split(",") if g.strip()} if whitelist_str else None
+    whitelist = {group.strip() for group in whitelist_str.split(",") if group.strip()} if whitelist_str else None
     
     if not whitelist:
         return _FALLBACK_GROUPS
     
     try:
-        # Get active groups from service and apply whitelist in main.
-        all_groups = GammaService.get_all_active_groups()
-        groups = [g for g in all_groups if g.get("id") in whitelist]
+        return [group for group in gs.get_all_super_groups() if group.id in whitelist]
 
-        if groups:
-            return groups
     except Exception as exc:
         print(f"Failed to fetch groups from Gamma: {exc}")
     
@@ -70,7 +66,7 @@ def _get_groups():
 
 def _get_meeting_form_data():
     return {
-        "years": list(range(date.today().year - 1, date.today().year + 2)),
+        "years": list(range(date.today().year - 1, date.today().year + 3)),
         "lps": [(lp.value, lp.name) for lp in LP],
         "current_year": date.today().year,
         "groups": _get_groups(),

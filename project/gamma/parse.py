@@ -54,27 +54,6 @@ def parse_group(data: dict) -> GammaGroup:
     )
 
 
-def parse_client_super_group(data: dict) -> GammaSuperGroup:
-    return GammaSuperGroup(
-        id=data["id"],
-        name=data["name"],
-        pretty_name=data.get("prettyName") or data["name"],
-        type=data["type"],
-        sv_description=data.get("svDescription", ""),
-        en_description=data.get("enDescription", ""),
-    )
-
-
-def parse_client_group(data: dict) -> GammaGroup:
-    return GammaGroup(
-        id=data["id"],
-        name=data["name"],
-        pretty_name=data.get("prettyName") or data["name"],
-        super_group=parse_client_super_group(data["superGroup"]),
-        group_members=None,
-    )
-
-
 def parse_group_post(data: dict) -> GammaGroupPost:
     return GammaGroupPost(
         group=parse_group(data["group"]),
