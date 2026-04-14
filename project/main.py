@@ -11,7 +11,10 @@ from flask import (
     jsonify,
 )
 from datetime import date
+from pathlib import Path
 import os
+import io
+import zipfile
 from .auth import login_required, login_as_admin_required
 from .data_handler import (
     LP,
@@ -24,6 +27,7 @@ from .data_handler import (
     DocumentOwner,
     DocumentType,
     fetch_documents_for_meeting,
+    fetch_downloadable_documents_for_meeting,
     DivisionDocumentTypes,
     MeetingDocumentTypes,
     LiberationDocumentTypes,
@@ -91,6 +95,25 @@ def _get_meeting_form_data():
     }
 
 
+def _get_group_id_to_name_map():
+    """Create a mapping of group IDs to group names."""
+    groups = _get_groups()
+    return {group_id: group_name for group_id, group_name, _ in groups}
+
+
+def _abbreviate_doc_type(doc_type: str) -> str:
+    """Abbreviate document type names for file naming."""
+    abbrev_map = {
+        "kvartal verksamhetsrapport": "kvrapport",
+        "kvartal ekonomiskrapport": "kerapport",
+        "budget": "budget",
+        "verksamhetsplan": "vplan",
+        "verksamhetsberattelse": "vberettelse",
+        "ekonomiskberattelse": "eberettelse",
+    }
+    return abbrev_map.get(doc_type.lower(), doc_type[:8])
+
+
 main = Blueprint("main", __name__)
 
 
@@ -142,6 +165,69 @@ def doc():
 @login_as_admin_required
 def admin():
     return render_template("admin.html", meetings=fetch_meetings())
+
+
+@main.route("/admin/download-meeting/<int:meeting_id>")
+@login_as_admin_required
+def download_meeting_documents(meeting_id):
+    # Get the meeting
+    meetings = fetch_meetings()
+    meeting = next((m for m in meetings if m.id == meeting_id), None)
+    if not meeting:
+        abort(404)
+    
+    # Get whitelist groups
+    whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
+    whitelist_group_ids = [id.strip() for id in whitelist_str.split(",") if id.strip()] if whitelist_str else []
+    
+    # Fallback to fallback groups if no whitelist
+    if not whitelist_group_ids:
+        whitelist_group_ids = [group_id for group_id, _, _ in _FALLBACK_GROUPS]
+    
+    # Fetch downloadable documents
+    documents = fetch_downloadable_documents_for_meeting(meeting_id, whitelist_group_ids)
+    
+    if not documents:
+        return "No documents to download.", 400 # TODO handle properly, sorry to whoever does
+    
+    # Create zip file
+    group_id_to_name = _get_group_id_to_name_map()
+    
+    # Generate zip filename
+    lp_name = "summer" if meeting.study_period.lp == 5 else f"lp{meeting.study_period.lp}"
+    date_str = meeting.date.strftime("%Y%m%d")
+    zip_filename = f"meeting_{lp_name}_{date_str}.zip"
+    
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for doc_id, file_path, owner_id, doc_type, doc_subtype in documents:
+            file_obj = file_path
+            if isinstance(file_path, str):
+                file_obj = file_path
+            else:
+                file_obj = str(file_path)
+            
+            # Generate filename inside zip
+            doc_type_abbr = _abbreviate_doc_type(doc_subtype)
+            group_name = group_id_to_name.get(owner_id, "unknown").lower()
+            year_short = meeting.study_period.year % 100
+            filename_inside_zip = f"{doc_type_abbr}_{group_name}{year_short}_{lp_name}_{meeting.study_period.year}"
+            
+            # Add file extension
+            if Path(file_obj).exists():
+                file_ext = Path(file_obj).suffix
+                filename_inside_zip += file_ext
+                
+                with open(file_obj, "rb") as f:
+                    zip_file.writestr(filename_inside_zip, f.read())
+    
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=zip_filename
+    )
 
 
 @main.route("/admin/meeting-requirements/<int:meeting_id>")

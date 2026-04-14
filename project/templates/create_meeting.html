@@ -5,12 +5,12 @@
   <div>
     <label for="meeting_date"><strong>Meeting Date</strong></label><br>
     <input id="meeting_date" name="meeting_date" type="date" 
-           value="{% if meeting %}{{ meeting.date }}{% endif %}" required />
+           value="{% if meeting %}{{ meeting.date }}{% endif %}" required {% if meeting %}disabled{% endif %} />
   </div>
 
   <div>
     <label for="year"><strong>Year</strong></label><br>
-    <select id="year" name="year" required>
+    <select id="year" name="year" required {% if meeting %}disabled{% endif %}>
       {% for y in years %}
       <option value="{{ y }}" 
               {% if meeting and meeting.study_period.year == y %}selected
@@ -21,7 +21,7 @@
 
   <div>
     <label for="lp"><strong>Study Period</strong></label><br>
-    <select id="lp" name="lp" required>
+    <select id="lp" name="lp" required {% if meeting %}disabled{% endif %}>
       {% for value, name in lps %}
       <option value="{{ value }}"
               {% if meeting and meeting.study_period.lp == value %}selected{% endif %}>{{ name }}</option>

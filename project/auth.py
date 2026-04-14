@@ -150,6 +150,13 @@ def callback():
         print(f"Failed to get api information: {e}")
         active_groups = []
 
+    # Map group names to their real IDs
+    group_id_map = {
+        "digit": "dea3493e-66e4-44b2-a657-cb57a6840dab",
+        "styrit": "45432d44-0de4-4ed0-88ce-8cdf31b72f73",
+        "motespresidit": "cc3fa327-0049-4e1d-b349-57f62223ec55",
+    }
+
     extra_groups = [
         (
             {
@@ -168,12 +175,12 @@ def callback():
                 }
                 if args == "devit_kass"
                 else {
-                    "id": f"dev-group-id-{args}",
+                    "id": group_id_map.get(args, f"dev-group-id-{args}"),
                     "name": args,
                     "prettyName": (
                         "MötespresidIT"
                         if args == "motespresidit"
-                        else ("styrIT" if args == "styrit" else args.upper())
+                        else ("styrIT" if args == "styrit" else ("digIT" if args == "digit" else args.upper()))
                     ),
                     "post": "Member",
                 }

@@ -39,7 +39,7 @@ class DivisionDocumentTypes(StrEnum):
     VERKSAMHETSPLAN = "verksamhetsplan"
 
 class LiberationDocumentTypes(StrEnum):
-    VERKSAMETSBERATTELSE = "veksamhetsberattelse"
+    VERKSAMETSBERATTELSE = "verksamhetsberattelse"
     EKONOMISKBERATTELSE = "ekonomiskberattelse"
 
 @dataclass(frozen=True, slots=True)
@@ -405,6 +405,50 @@ def fetch_documents_for_meeting(
     return documents_by_owner
 
 
+def fetch_downloadable_documents_for_meeting(
+    meeting_id: int, whitelist_group_ids: list[str]
+) -> list[tuple]:
+    """
+    Fetch division and liberation documents for a meeting.
+    Excludes meeting documents and only includes documents from whitelisted groups.
+    Returns list of tuples: (document_id, file_path, owner_id, doc_type, doc_subtype)
+    """
+    conn = get_db()
+    documents = []
+    
+    with conn.cursor() as cur:
+        # Fetch division documents for the meeting's study period
+        cur.execute(
+            """
+            SELECT d.document_id, d.file_path, d.gamma_owner_id, 'division'::text, ddt.type_name
+            FROM Documents d
+            JOIN DivisionDocuments dd ON d.document_id = dd.document_id
+            JOIN DivisionDocumentTypes ddt ON dd.type_id = ddt.type_id
+            JOIN Meetings m ON dd.study_period_id = m.study_period_id
+            WHERE m.meeting_id = %s AND d.gamma_owner_id = ANY(%s)
+            ORDER BY d.uploaded DESC;
+            """,
+            (meeting_id, whitelist_group_ids),
+        )
+        documents.extend(cur.fetchall())
+        
+        # Fetch liberation documents
+        cur.execute(
+            """
+            SELECT d.document_id, d.file_path, d.gamma_owner_id, 'liberation'::text, ldt.type_name
+            FROM Documents d
+            JOIN LiberationDocuments ld ON d.document_id = ld.document_id
+            JOIN LiberationDocumentTypes ldt ON ld.type_id = ldt.type_id
+            WHERE d.gamma_owner_id = ANY(%s)
+            ORDER BY d.uploaded DESC;
+            """,
+            (whitelist_group_ids,),
+        )
+        documents.extend(cur.fetchall())
+    
+    return documents
+
+
 def fetch_document_by_id(document_id: int, allowed_owner_ids: list[str]) -> dict | None:
     conn = get_db()
     with conn.cursor() as cur:
@@ -439,12 +483,15 @@ def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
 
             file_path = Path(row[0])
 
-            # Delete from MeetingDocuments or DivisionDocuments first (foreign key constraint)
+            # Delete from related document tables first (foreign key constraints)
             cur.execute(
                 "DELETE FROM MeetingDocuments WHERE document_id = %s;", (document_id,)
             )
             cur.execute(
                 "DELETE FROM DivisionDocuments WHERE document_id = %s;", (document_id,)
+            )
+            cur.execute(
+                "DELETE FROM LiberationDocuments WHERE document_id = %s;", (document_id,)
             )
 
             # Now delete from Documents

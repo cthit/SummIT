@@ -1,6 +1,10 @@
 {% extends "base.html" %} {% block content %}
 <h1>Admin</h1>
 
+{% if message %}
+<div class="alert">{{ message }}</div>
+{% endif %}
+
 <div class="center-content">
   <h2 class="inline-display">Select meeting:</h2>
   <select id="meetingSelect" onchange="loadMeetingRequirements()">
@@ -20,6 +24,7 @@
   <h2>Document Requirements</h2>
   <div id="requirementsTable"></div>
   <div class="center-content">
+    <button onclick="downloadMeetingDocuments()">Download Meeting Documents</button>
     <button onclick="editMeeting()">Edit Meeting</button>
     <button onclick="deleteMeeting()">Delete Meeting</button>
   </div>
@@ -71,6 +76,13 @@ function editMeeting() {
     location.href = `/admin/manage-meeting/${currentMeetingId}`;
   }
 }
+
+function downloadMeetingDocuments() {
+  if (currentMeetingId) {
+    location.href = `/admin/download-meeting/${currentMeetingId}`;
+  }
+}
+
 
 function deleteMeeting() {
   if (currentMeetingId && confirm('Delete this meeting and all associated documents?')) {
