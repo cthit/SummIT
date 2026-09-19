@@ -17,7 +17,6 @@
     {% endfor %}
   </select>
   <a href="{{ url_for('main.create_meeting_page') }}">Create Meeting</a>
-  <a href="{{ url_for('main.mail') }}">Send Mail</a>
 </div>
 
 <div id="requirementsContainer" class="hidden">
@@ -27,6 +26,7 @@
     <button onclick="downloadMeetingDocuments()">Download Meeting Documents</button>
     <button onclick="editMeeting()">Edit Meeting</button>
     <button onclick="deleteMeeting()">Delete Meeting</button>
+    <button onclick="send_mail()">Send Anouncment</button>
   </div>
 </div>
 
@@ -87,6 +87,15 @@ function downloadMeetingDocuments() {
 function deleteMeeting() {
   if (currentMeetingId && confirm('Delete this meeting and all associated documents?')) {
     location.href = `/admin/delete-meeting/${currentMeetingId}`;
+  }
+}
+
+function send_mail() {
+  if (currentMeetingId && confirm('Do you wanna send mail?')) {
+    fetch(`/admin/mail/send/${currentMeetingId}`, {
+        method: 'POST'
+      }
+    );
   }
 }
 </script>

@@ -2,6 +2,10 @@
 
 import os
 import requests
+import jinja2
+from pathlib import Path
+
+from .mail_config.variables import *
 
 
 GOTIFY_URL = os.getenv("GOTIFY_URL", "http://localhost:8080")
@@ -10,7 +14,7 @@ GOTIFY_KEY = os.getenv("GOTIFY_PRE_SHARED_KEY") or os.getenv(
 )
 
 
-def send_mail(to: str, subject: str, body: str):
+def send_mail(to: list[str], subject: str, body: str):
     """Send an email through Gotify.
 
     Args:
@@ -27,7 +31,7 @@ def send_mail(to: str, subject: str, body: str):
     response = requests.post(
         f"{GOTIFY_URL.rstrip('/')}/mail",
         json={
-            "to": to,
+            "to": ",".join(to),
             "from": "admin@chalmers.it",
             "subject": subject,
             "body": body,
@@ -40,3 +44,16 @@ def send_mail(to: str, subject: str, body: str):
     )
     response.raise_for_status()
     return response.json()
+
+
+def send_mail_config(to: list[str], subject: str, config: Path, vars: dict[str, str]):
+    """
+    Based on given config, should populate the varaiables and send mail
+
+    """
+    with open(config) as f:
+        c = f.read()
+
+    body = jinja2.Template(c).render(**(get_static_values() | vars))
+
+    send_mail(to, subject, body)

@@ -1,8 +1,8 @@
-Dear {group_name},
+Dear {{ group_name }},
 
 This is a reminder that the deadline for uploading documents for the meeting on {meeting_date} is approaching.
 
-Deadline: {deadline_date} at {deadline_time}
+Deadline: {{ deadline_date }} at {{ deadline_time }}
 
 You have not yet uploaded the following required documents:
 {task_list}

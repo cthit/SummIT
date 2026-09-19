@@ -1,4 +1,8 @@
 {% extends "base.html" %} {% block content %}
 <h1>Mail :)</h1>
 
+<form action="{{ url_for('mail.send_mail') }}" method="POST">
+    <button type="submit">Send mail to Napster</button>
+</form>
+
 {% endblock %}

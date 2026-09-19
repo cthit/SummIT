@@ -56,33 +56,47 @@ def _meeting_label(meeting):
 
 def _get_groups():
     whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
-    whitelist = {group_id.strip() for group_id in whitelist_str.split(",") if group_id.strip()} if whitelist_str else None
-    
+    whitelist = (
+        {group_id.strip() for group_id in whitelist_str.split(",") if group_id.strip()}
+        if whitelist_str
+        else None
+    )
+
     if not whitelist:
         return _FALLBACK_GROUPS
-    
+
     try:
         entries = gs.get_all_super_groups()
-        
+
         if not entries:
             print("Error: Gamma returned 0 super group entries")
             raise ValueError("No super groups returned from Gamma blob endpoint")
-        
-        filtered_groups = [(entry.super_group.id, entry.super_group.name, entry.super_group.pretty_name) for entry in entries if entry.super_group.id in whitelist]
-        
+
+        filtered_groups = [
+            (
+                entry.super_group.id,
+                entry.super_group.name,
+                entry.super_group.pretty_name,
+            )
+            for entry in entries
+            if entry.super_group.id in whitelist
+        ]
+
         if not filtered_groups:
             available_ids = [entry.super_group.id for entry in entries]
-            print(f"Error: No groups matched whitelist. Available group IDs: {available_ids}")
+            print(
+                f"Error: No groups matched whitelist. Available group IDs: {available_ids}"
+            )
             raise ValueError("No matching groups found in whitelist")
-        
+
         return filtered_groups
 
     except Exception as exc:
         print(f"Error: Failed to fetch groups from Gamma - {type(exc).__name__}: {exc}")
-    
+
     print("Using fallback groups")
     return _FALLBACK_GROUPS
- 
+
 
 def _get_meeting_form_data():
     groups = _get_groups()
@@ -90,8 +104,13 @@ def _get_meeting_form_data():
         "years": list(range(date.today().year - 1, date.today().year + 3)),
         "lps": [(lp.value, lp.name) for lp in LP],
         "current_year": date.today().year,
-        "groups": [{"id": group_id, "name": group_name, "pretty_name": group_pretty_name} for group_id, group_name, group_pretty_name in groups],
-        "division_doc_types": [document_type for document_type in DivisionDocumentTypes],
+        "groups": [
+            {"id": group_id, "name": group_name, "pretty_name": group_pretty_name}
+            for group_id, group_name, group_pretty_name in groups
+        ],
+        "division_doc_types": [
+            document_type for document_type in DivisionDocumentTypes
+        ],
     }
 
 
@@ -175,29 +194,40 @@ def download_meeting_documents(meeting_id):
     meeting = next((m for m in meetings if m.id == meeting_id), None)
     if not meeting:
         abort(404)
-    
+
     # Get whitelist groups
     whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
-    whitelist_group_ids = [id.strip() for id in whitelist_str.split(",") if id.strip()] if whitelist_str else []
-    
+    whitelist_group_ids = (
+        [id.strip() for id in whitelist_str.split(",") if id.strip()]
+        if whitelist_str
+        else []
+    )
+
     # Fallback to fallback groups if no whitelist
     if not whitelist_group_ids:
         whitelist_group_ids = [group_id for group_id, _, _ in _FALLBACK_GROUPS]
-    
+
     # Fetch downloadable documents
-    documents = fetch_downloadable_documents_for_meeting(meeting_id, whitelist_group_ids)
-    
+    documents = fetch_downloadable_documents_for_meeting(
+        meeting_id, whitelist_group_ids
+    )
+
     if not documents:
-        return "No documents to download.", 400 # TODO handle properly, sorry to whoever does
-    
+        return (
+            "No documents to download.",
+            400,
+        )  # TODO handle properly, sorry to whoever does
+
     # Create zip file
     group_id_to_name = _get_group_id_to_name_map()
-    
+
     # Generate zip filename
-    lp_name = "summer" if meeting.study_period.lp == 5 else f"lp{meeting.study_period.lp}"
+    lp_name = (
+        "summer" if meeting.study_period.lp == 5 else f"lp{meeting.study_period.lp}"
+    )
     date_str = meeting.date.strftime("%Y%m%d")
     zip_filename = f"meeting_{lp_name}_{date_str}.zip"
-    
+
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for doc_id, file_path, owner_id, doc_type, doc_subtype in documents:
@@ -206,27 +236,27 @@ def download_meeting_documents(meeting_id):
                 file_obj = file_path
             else:
                 file_obj = str(file_path)
-            
+
             # Generate filename inside zip
             doc_type_abbr = _abbreviate_doc_type(doc_subtype)
             group_name = group_id_to_name.get(owner_id, "unknown").lower()
             year_short = meeting.study_period.year % 100
             filename_inside_zip = f"{doc_type_abbr}_{group_name}{year_short}_{lp_name}_{meeting.study_period.year}"
-            
+
             # Add file extension
             if Path(file_obj).exists():
                 file_ext = Path(file_obj).suffix
                 filename_inside_zip += file_ext
-                
+
                 with open(file_obj, "rb") as f:
                     zip_file.writestr(filename_inside_zip, f.read())
-    
+
     zip_buffer.seek(0)
     return send_file(
         zip_buffer,
         mimetype="application/zip",
         as_attachment=True,
-        download_name=zip_filename
+        download_name=zip_filename,
     )
 
 
@@ -237,7 +267,10 @@ def get_meeting_requirements_json(meeting_id):
     return jsonify(
         {
             "groups": form_data["groups"],
-            "doc_types": [[dt.value, dt.name.replace("_", " ").title()] for dt in form_data["division_doc_types"]],
+            "doc_types": [
+                [dt.value, dt.name.replace("_", " ").title()]
+                for dt in form_data["division_doc_types"]
+            ],
             "requires": get_document_requires(meeting_id),
         }
     )
@@ -314,41 +347,47 @@ def document_upload():
     document_subtype_str = (
         request.form.get("meeting_document_subtype")
         if document_type_str == "meeting"
-        else (request.form.get("liberation_document_subtype")
-              if document_type_str == "liberation"
-              else request.form.get("division_document_subtype"))
+        else (
+            request.form.get("liberation_document_subtype")
+            if document_type_str == "liberation"
+            else request.form.get("division_document_subtype")
+        )
     )
 
     if not uploaded_file:
         flash("No file selected.", "error")
         meetings = fetch_meetings()
         return render_template(
-            "upload.html", 
-            meetings=meetings, 
+            "upload.html",
+            meetings=meetings,
             user=g.user,
             meeting_doc_types=MeetingDocumentTypes,
             division_doc_types=DivisionDocumentTypes,
             liberation_doc_types=LiberationDocumentTypes,
         )
-    
+
     # Meeting is only required for meeting and division documents
     if document_type_str != "liberation" and not meeting_id:
         flash("Please select a meeting.", "error")
         meetings = fetch_meetings()
         return render_template(
-            "upload.html", 
-            meetings=meetings, 
-            selected_meeting=None, 
+            "upload.html",
+            meetings=meetings,
+            selected_meeting=None,
             user=g.user,
             meeting_doc_types=MeetingDocumentTypes,
             division_doc_types=DivisionDocumentTypes,
             liberation_doc_types=LiberationDocumentTypes,
         )
-    
+
     if not owner_id:
         flash("Please select who to upload as.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        selected_meeting = (
+            next((m for m in meetings if m.id == meeting_id), None)
+            if meeting_id
+            else None
+        )
         return render_template(
             "upload.html",
             meetings=meetings,
@@ -364,7 +403,11 @@ def document_upload():
     except ValueError:
         flash("Please select a document type.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        selected_meeting = (
+            next((m for m in meetings if m.id == meeting_id), None)
+            if meeting_id
+            else None
+        )
         return render_template(
             "upload.html",
             meetings=meetings,
@@ -379,7 +422,11 @@ def document_upload():
     if owner_id == "self" and document_type != DocumentType.MEETING:
         flash("You can only upload meeting documents as yourself.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        selected_meeting = (
+            next((m for m in meetings if m.id == meeting_id), None)
+            if meeting_id
+            else None
+        )
         return render_template(
             "upload.html",
             meetings=meetings,
@@ -394,7 +441,11 @@ def document_upload():
     if owner_id == "self" and document_subtype_str not in ["motion", "other"]:
         flash("You can only upload motions or other documents as yourself.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        selected_meeting = (
+            next((m for m in meetings if m.id == meeting_id), None)
+            if meeting_id
+            else None
+        )
         return render_template(
             "upload.html",
             meetings=meetings,
@@ -408,7 +459,11 @@ def document_upload():
     if not document_subtype_str:
         flash("Please select a document subtype.", "error")
         meetings = fetch_meetings()
-        selected_meeting = next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+        selected_meeting = (
+            next((m for m in meetings if m.id == meeting_id), None)
+            if meeting_id
+            else None
+        )
         return render_template(
             "upload.html",
             meetings=meetings,
@@ -521,7 +576,7 @@ def manage_meeting(meeting_id):
     )
 
 
-@main.route("/admin/mail")
-@login_as_admin_required
-def mail():
-    return render_template("mail.html")
+# @main.route("/admin/mail")
+# @login_as_admin_required
+# def mail():
+#     return render_template("mail.html")

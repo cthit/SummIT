@@ -38,9 +38,11 @@ class DivisionDocumentTypes(StrEnum):
     BUDGET = "budget"
     VERKSAMHETSPLAN = "verksamhetsplan"
 
+
 class LiberationDocumentTypes(StrEnum):
     VERKSAMETSBERATTELSE = "verksamhetsberattelse"
     EKONOMISKBERATTELSE = "ekonomiskberattelse"
+
 
 @dataclass(frozen=True, slots=True)
 class StudyPeriod:
@@ -111,6 +113,21 @@ def fetch_meetings() -> list[Meeting]:
         )
         meeting_data = cur.fetchall()
     return list(map(lambda x: Meeting(*x[:2], StudyPeriod(*x[2:])), meeting_data))
+
+
+def fetch_meeting(meeting_id) -> Meeting:
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT meeting_id, meeting_date, StudyPeriods.study_period_id, study_year, study_period
+            FROM Meetings JOIN StudyPeriods ON Meetings.study_period_id=StudyPeriods.study_period_id
+            WHERE meeting_id = %s;
+            """,
+            (meeting_id,),
+        )
+        meeting_data = cur.fetchone()
+    return Meeting(*meeting_data[:2], StudyPeriod(*meeting_data[2:]))
 
 
 def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
@@ -308,9 +325,7 @@ def create_document_owner(document_owner: DocumentOwner, is_group: bool = False)
         raise
 
 
-def fetch_liberation_documents(
-    user_id: str, group_ids: list[str]
-) -> dict:
+def fetch_liberation_documents(user_id: str, group_ids: list[str]) -> dict:
     """Fetch all liberation documents accessible to the user and their groups."""
     conn = get_db()
     all_owner_ids = [user_id] + group_ids
@@ -415,7 +430,7 @@ def fetch_downloadable_documents_for_meeting(
     """
     conn = get_db()
     documents = []
-    
+
     with conn.cursor() as cur:
         # Fetch division documents for the meeting's study period
         cur.execute(
@@ -431,7 +446,7 @@ def fetch_downloadable_documents_for_meeting(
             (meeting_id, whitelist_group_ids),
         )
         documents.extend(cur.fetchall())
-        
+
         # Fetch liberation documents
         cur.execute(
             """
@@ -445,7 +460,7 @@ def fetch_downloadable_documents_for_meeting(
             (whitelist_group_ids,),
         )
         documents.extend(cur.fetchall())
-    
+
     return documents
 
 
@@ -491,7 +506,8 @@ def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
                 "DELETE FROM DivisionDocuments WHERE document_id = %s;", (document_id,)
             )
             cur.execute(
-                "DELETE FROM LiberationDocuments WHERE document_id = %s;", (document_id,)
+                "DELETE FROM LiberationDocuments WHERE document_id = %s;",
+                (document_id,),
             )
 
             # Now delete from Documents
@@ -564,7 +580,7 @@ def delete_meeting_and_documents(meeting_id: int) -> bool:
         return False
 
 
-def get_document_requires(meeting_id: int) -> dict:
+def get_document_requires(meeting_id: int) -> dict[str, list[str]]:
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(

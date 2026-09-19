@@ -180,7 +180,11 @@ def callback():
                     "prettyName": (
                         "MötespresidIT"
                         if args == "motespresidit"
-                        else ("styrIT" if args == "styrit" else ("digIT" if args == "digit" else args.upper()))
+                        else (
+                            "styrIT"
+                            if args == "styrit"
+                            else ("digIT" if args == "digit" else args.upper())
+                        )
                     ),
                     "post": "Member",
                 }

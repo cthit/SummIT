@@ -1,6 +1,6 @@
 """Example usage of the mail_handler module."""
 
-from mail_handler import send_mail
+from .mail_handler import send_mail
 
 
 def example_simple_mail():
@@ -8,7 +8,7 @@ def example_simple_mail():
     print("Sending email...")
 
     response = send_mail(
-        to="napster@chalmers.it",
+        to=["napster@chalmers.it", "hero@chalmers.it"],
         subject="Test Email",
         body="It worked B)",
     )

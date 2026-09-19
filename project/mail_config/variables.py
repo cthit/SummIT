@@ -29,7 +29,7 @@ DYNAMIC_VARIABLES = [
 ]
 
 
-def get_static_values():
+def get_static_values() -> dict[str, str]:
     """Returns a dictionary of static variable values from environment."""
     return {
         "frontend_url": os.getenv("FRONTEND_URL", "https://summit.chalmers.it"),
@@ -37,5 +37,5 @@ def get_static_values():
         "secretary_email": os.getenv("SECRETARY_EMAIL", "motespresidit@chalmers.it"),
         "secretary_display_name": os.getenv("SECRETARY_DISPLAY_NAME", "MötespresidIT"),
         "board_display_name": os.getenv("BOARD_DISPLAY_NAME", "styrIT Board"),
-        "board_email": os.getenv("BOARD_EMAIL", "board@chalmers.it"),
+        "board_email": os.getenv("BOARD_EMAIL", "styrit@chalmers.it"),
     }
