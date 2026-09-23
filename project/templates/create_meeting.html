@@ -10,7 +10,6 @@
 
   <div>
     <label for="deadline"><strong>{{ t('admin.deadline') }}</strong></label>
-    {{ t('admin.deadline_hint') }}<br>
     {# Stays editable in edit mode, unlike the date - clearing it removes the deadline #}
     <input id="deadline" name="deadline" type="date"
            value="{% if meeting and meeting.deadline %}{{ meeting.deadline.strftime('%Y-%m-%d') }}{% endif %}"

@@ -75,10 +75,6 @@ TRANSLATIONS = {
     "admin.group": {"en": "Group", "sv": "Grupp"},
     "admin.meeting_date": {"en": "Meeting Date", "sv": "Mötesdatum"},
     "admin.deadline": {"en": "Upload Deadline", "sv": "Uppladdningsdeadline"},
-    "admin.deadline_hint": {
-        "en": "(documents are due 23:59 that day)",
-        "sv": "(dokument ska in senast 23:59 den dagen)",
-    },
     "admin.study_period_label": {"en": "Study Period:", "sv": "Läsperiod:"},
     "admin.pick_a_date": {"en": "pick a date", "sv": "välj ett datum"},
     "admin.cancel": {"en": "Cancel", "sv": "Avbryt"},
