@@ -1,10 +1,12 @@
 from project.database import get_db
 import datetime
+import logging
 from enum import IntEnum, StrEnum
 from dataclasses import dataclass
 from pathlib import Path
-import os
 import hashlib
+
+logger = logging.getLogger(__name__)
 
 UPLOAD_BASE: Path = Path("/") / "data" / "uploads"
 

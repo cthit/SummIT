@@ -1,3 +1,5 @@
+import logging
+
 from flask import (
     Blueprint,
     render_template,
@@ -19,7 +21,6 @@ from werkzeug.utils import secure_filename
 from .auth import login_required, login_as_admin_required, is_admin
 from .data_handler import (
     LP,
-    StudyPeriod,
     DuplicateDocumentError,
     infer_study_period_from_date,
     create_meeting,
@@ -43,6 +44,8 @@ from .data_handler import (
     update_meeting_deadline,
 )
 from .gamma import GammaService as gs
+
+logger = logging.getLogger(__name__)
 
 
 # Allowed upload types: extension plus the file signature it must carry
@@ -76,7 +79,6 @@ def _get_groups():
         entries = gs.get_all_super_groups()
 
         if not entries:
-            print("Error: Gamma returned 0 super group entries")
             raise ValueError("No super groups returned from Gamma blob endpoint")
 
         filtered_groups = [
@@ -91,17 +93,17 @@ def _get_groups():
 
         if not filtered_groups:
             available_ids = [entry.super_group.id for entry in entries]
-            print(
-                f"Error: No groups matched whitelist. Available group IDs: {available_ids}"
+            logger.error(
+                "No groups matched whitelist. Available group IDs: %s", available_ids
             )
             raise ValueError("No matching groups found in whitelist")
 
         return filtered_groups
 
-    except Exception as exc:
-        print(f"Error: Failed to fetch groups from Gamma - {type(exc).__name__}: {exc}")
+    except Exception:
+        logger.exception("Failed to fetch groups from Gamma")
 
-    print("Using fallback groups")
+    logger.warning("Using fallback groups")
     return _FALLBACK_GROUPS
 
 

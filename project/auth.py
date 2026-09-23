@@ -11,8 +11,11 @@ from flask import (
 from authlib.integrations.flask_client import OAuth
 from functools import wraps
 from dotenv import load_dotenv
+import logging
 import os
 import requests
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -156,8 +159,8 @@ def callback():
     #     }
     # }
 
-    except Exception as e:
-        print(f"Failed to get api information: {e}")
+    except Exception:
+        logger.exception("Failed to get api information")
         active_groups = []
 
     # Map group names to their real IDs

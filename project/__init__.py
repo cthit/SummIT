@@ -1,4 +1,4 @@
-from flask import Flask, g, session
+from flask import Flask, session
 from dotenv import load_dotenv
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from authlib.integrations.flask_client import OAuth
@@ -12,11 +12,20 @@ from .error import (
     handle_http_exception,
     handle_unexpected_error,
 )
+import logging
 import os
 
 
 def create_app():
     load_dotenv()
+
+    # Under gunicorn nothing configures logging, leaving app.logger at
+    # WARNING and module loggers silent - set up a real root handler.
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
     gamma_root = os.getenv("GAMMA_ROOT", "https://auth.chalmers.it")
     client_id = os.getenv("GAMMA_CLIENT_ID", "")
     client_secret = os.getenv("GAMMA_CLIENT_SECRET", "")
