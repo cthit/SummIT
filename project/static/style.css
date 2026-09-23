@@ -13,6 +13,27 @@ div.navbar {
   text-align: center;
 }
 
+/* Flash messages */
+.flash {
+  margin: 0.5rem auto;
+  padding: 0.5rem 1rem;
+  max-width: 40rem;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.flash-error {
+  background-color: #fdecea;
+  border-color: #c0392b;
+  color: #7b241c;
+}
+
+.flash-success {
+  background-color: #eafaf1;
+  border-color: #27ae60;
+  color: #1e6b41;
+}
+
 .inline-display {
   display: inline;
 }
