@@ -17,6 +17,35 @@ class LP(IntEnum):
     SUMMER = 5
 
 
+def infer_study_period_from_date(meeting_date: datetime.date) -> tuple[int, "LP"]:
+    """Map a date to (study_year, lp).
+
+    study_year is the calendar year in which the study period STARTS, so
+    early-January dates belong to the previous year's LP2. This keeps a
+    December and a January meeting on the same StudyPeriod row, which
+    division documents hang off.
+
+    Boundaries are approximations of the Chalmers academic calendar
+    (real dates shift a few days per year):
+    LP1 Sep-Oct, LP2 Nov-Jan 15, LP3 Jan 16-Mar, LP4 Apr-Jun 15,
+    SUMMER Jun 16-Aug.
+    """
+    m, d = meeting_date.month, meeting_date.day
+    if m in (9, 10):
+        return meeting_date.year, LP.LP1
+    if m in (11, 12):
+        return meeting_date.year, LP.LP2
+    if m == 1:
+        if d <= 15:
+            return meeting_date.year - 1, LP.LP2
+        return meeting_date.year, LP.LP3
+    if m in (2, 3):
+        return meeting_date.year, LP.LP3
+    if m in (4, 5) or (m == 6 and d <= 15):
+        return meeting_date.year, LP.LP4
+    return meeting_date.year, LP.SUMMER
+
+
 class DocumentType(StrEnum):
     MEETING = "meeting"
     DIVISION = "division"
