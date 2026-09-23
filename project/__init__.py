@@ -1,10 +1,12 @@
 from flask import Flask, g, session
 from dotenv import load_dotenv
+from werkzeug.exceptions import RequestEntityTooLarge
 from authlib.integrations.flask_client import OAuth
 from .auth import auth as auth_blueprint, set_user_in_g
 from .main import main as main_blueprint
 from .mail import mail as mail_blueprint
 from .database import db
+from .error import handle_upload_filesize_error
 import os
 
 
@@ -13,12 +15,17 @@ def create_app():
     gamma_root = os.getenv("GAMMA_ROOT", "https://auth.chalmers.it")
     client_id = os.getenv("GAMMA_CLIENT_ID", "")
     client_secret = os.getenv("GAMMA_CLIENT_SECRET", "")
+    max_content_length = int(os.getenv("APP_MAX_CONTENT_LENGTH","16_000_000"))
 
     app = Flask(__name__)
 
     db.init_app(app)
 
+    app.config['MAX_CONTENT_LENGTH'] = max_content_length
+
     app.config["SECRET_KEY"] = os.getenv("APP_SECRET_KEY", "")
+
+    app.register_error_handler(Exception, handle_upload_filesize_error)
 
     # Initialize OAuth with the Flask app
     oauth = OAuth(app)

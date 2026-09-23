@@ -27,7 +27,7 @@ def send_mail_route(meeting_id):
     }  # dict[GammaSuperGroup, str[documents=task_list]]
 
     date = meeting_obj.date
-    lp = meeting_obj.study_period.lp.name
+    lp = meeting_obj.study_period.lp
     year = meeting_obj.study_period.year
 
     for group, requirements in dr.items():
@@ -39,7 +39,7 @@ def send_mail_route(meeting_id):
 
         send_mail_config(
             [f"{group.name}@chalmers.it"],
-            f"Meeting Anouncement {lp} {year}",
+            f"Meeting Anouncement {"Summer" if lp==5 else f"lp{lp}"} {year}",
             Path("project/mail_config/meeting_announcement.txt"),
             vars,
         )
