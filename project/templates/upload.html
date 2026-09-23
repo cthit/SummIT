@@ -60,12 +60,13 @@
     </div>
     <div id="division_subtype" class="hidden">
       <label>Division document type:</label><br>
-      <select name="division_document_subtype">
+      <select name="division_document_subtype" onchange="updateDivisionWarning()">
         <option value="">Select type...</option>
         {% for doc_type in division_doc_types %}
         <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
         {% endfor %}
       </select>
+      <div id="division_requirement_warning" class="hidden"></div>
     </div>
     <div id="liberation_subtype" class="hidden">
       <label>Liberation document type:</label><br>
@@ -83,6 +84,42 @@
 </form>
 
 <script>
+// {group_id: [required division doc types]} for the selected meeting
+const REQUIRES = {{ requires|tojson }};
+
+function requiredTypesForOwner() {
+  const ownerSelect = document.querySelector('select[name="owner_id"]');
+  if (!ownerSelect.value || ownerSelect.value === 'self') return null;
+  return REQUIRES[ownerSelect.value] || [];
+}
+
+function annotateDivisionOptions() {
+  const required = requiredTypesForOwner();
+  const options = document.querySelectorAll('select[name="division_document_subtype"] option:not([value=""])');
+  options.forEach(option => {
+    if (!option.dataset.label) option.dataset.label = option.textContent.trim();
+    const isRequired = required && required.includes(option.value);
+    option.textContent = option.dataset.label + (isRequired ? ' (required)' : '');
+  });
+  updateDivisionWarning();
+}
+
+function updateDivisionWarning() {
+  const warning = document.getElementById('division_requirement_warning');
+  const divisionRadio = document.querySelector('input[name="document_type"][value="division"]');
+  const select = document.querySelector('select[name="division_document_subtype"]');
+  const required = requiredTypesForOwner();
+  const show = divisionRadio.checked && required !== null && select.value
+    && !required.includes(select.value);
+  if (show) {
+    warning.textContent = 'This document type is not required from this group for this meeting - upload anyway if intentional.';
+    warning.className = 'flash flash-warning';
+  } else {
+    warning.textContent = '';
+    warning.className = 'hidden';
+  }
+}
+
 function updateDocumentTypeOptions() {
   const ownerSelect = document.querySelector('select[name="owner_id"]');
   const divisionOption = document.getElementById('division_option');
@@ -111,6 +148,7 @@ function updateDocumentTypeOptions() {
     // Show all meeting subtypes for groups
     filterMeetingSubtypes(false);
   }
+  annotateDivisionOptions();
   toggleDocumentSubtype();
 }
 
@@ -164,6 +202,7 @@ function toggleDocumentSubtype() {
     divisionSelect.required = false;
     liberationSelect.required = true;
   }
+  updateDivisionWarning();
 }
 
 window.addEventListener('DOMContentLoaded', function() {

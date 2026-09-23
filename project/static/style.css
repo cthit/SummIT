@@ -34,6 +34,12 @@ div.navbar {
   color: #1e6b41;
 }
 
+.flash-warning {
+  background-color: #fdf6e3;
+  border-color: #b7950b;
+  color: #7d6608;
+}
+
 .inline-display {
   display: inline;
 }

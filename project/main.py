@@ -350,6 +350,7 @@ def create_meeting_page():
 def _render_upload_form(meetings=None, selected_meeting=None):
     if meetings is None:
         meetings = fetch_meetings()
+    requires = get_document_requires(selected_meeting.id) if selected_meeting else {}
     return render_template(
         "upload.html",
         meetings=meetings,
@@ -358,6 +359,7 @@ def _render_upload_form(meetings=None, selected_meeting=None):
         meeting_doc_types=MeetingDocumentTypes,
         division_doc_types=DivisionDocumentTypes,
         liberation_doc_types=LiberationDocumentTypes,
+        requires=requires,
     )
 
 
