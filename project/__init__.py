@@ -1,12 +1,16 @@
 from flask import Flask, g, session
 from dotenv import load_dotenv
-from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from authlib.integrations.flask_client import OAuth
 from .auth import auth as auth_blueprint, set_user_in_g
 from .main import main as main_blueprint
 from .mail import mail as mail_blueprint
 from .database import db
-from .error import handle_upload_filesize_error
+from .error import (
+    handle_file_too_large,
+    handle_http_exception,
+    handle_unexpected_error,
+)
 import os
 
 
@@ -25,7 +29,11 @@ def create_app():
 
     app.config["SECRET_KEY"] = os.getenv("APP_SECRET_KEY", "")
 
-    app.register_error_handler(Exception, handle_upload_filesize_error)
+    # Registering HTTPException separately keeps abort(404) etc. out of
+    # the generic 500 handler.
+    app.register_error_handler(RequestEntityTooLarge, handle_file_too_large)
+    app.register_error_handler(HTTPException, handle_http_exception)
+    app.register_error_handler(Exception, handle_unexpected_error)
 
     # Initialize OAuth with the Flask app
     oauth = OAuth(app)
