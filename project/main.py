@@ -366,19 +366,27 @@ def document_upload():
             liberation_doc_types=LiberationDocumentTypes,
         )
 
-    # Meeting is only required for meeting and division documents
-    if document_type_str != "liberation" and not meeting_id:
-        flash("Please select a meeting.", "error")
+    # Meeting is only required for meeting and division documents.
+    # Validate that the submitted id refers to a real meeting: a forged or
+    # stale id would otherwise crash upload_document further down.
+    if document_type_str != "liberation":
         meetings = fetch_meetings()
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=None,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
+        selected_meeting = (
+            next((m for m in meetings if m.id == meeting_id), None)
+            if meeting_id
+            else None
         )
+        if not selected_meeting:
+            flash("Please select a valid meeting.", "error")
+            return render_template(
+                "upload.html",
+                meetings=meetings,
+                selected_meeting=None,
+                user=g.user,
+                meeting_doc_types=MeetingDocumentTypes,
+                division_doc_types=DivisionDocumentTypes,
+                liberation_doc_types=LiberationDocumentTypes,
+            )
 
     if not owner_id:
         flash("Please select who to upload as.", "error")
@@ -474,11 +482,31 @@ def document_upload():
             liberation_doc_types=LiberationDocumentTypes,
         )
 
-    # Determine the actual owner ID (self or group)
+    # Determine the actual owner ID (self or group). A user may only
+    # upload on behalf of groups they are actually a member of - the
+    # form value cannot be trusted.
     if owner_id == "self":
         actual_owner_id = g.user["id"]
         is_group = False
     else:
+        allowed_group_ids = {grp.get("id") for grp in g.user.get("groups", [])}
+        if owner_id not in allowed_group_ids:
+            flash("You are not a member of that group.", "error")
+            meetings = fetch_meetings()
+            selected_meeting = (
+                next((m for m in meetings if m.id == meeting_id), None)
+                if meeting_id
+                else None
+            )
+            return render_template(
+                "upload.html",
+                meetings=meetings,
+                selected_meeting=selected_meeting,
+                user=g.user,
+                meeting_doc_types=MeetingDocumentTypes,
+                division_doc_types=DivisionDocumentTypes,
+                liberation_doc_types=LiberationDocumentTypes,
+            )
         actual_owner_id = owner_id
         is_group = True
 
