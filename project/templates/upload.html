@@ -28,6 +28,17 @@
   </form>
 </div>
 
+{% if selected_meeting and selected_meeting.deadline %}
+<p><strong>Upload deadline:</strong> {{ selected_meeting.deadline.strftime('%Y-%m-%d %H:%M') }}</p>
+{% if deadline_passed %}
+<div class="flash flash-warning">
+  The upload deadline for this meeting has passed. Only meeting admins can
+  upload meeting or division documents now (liberation documents are
+  unaffected).
+</div>
+{% endif %}
+{% endif %}
+
 <form id="uploadForm" action="/documents/upload" method="post" enctype="multipart/form-data"
   {% if not selected_meeting %}class="hidden"{% endif %}>
     {% if selected_meeting %}

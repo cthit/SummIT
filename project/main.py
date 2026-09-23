@@ -16,7 +16,7 @@ import os
 import io
 import zipfile
 from werkzeug.utils import secure_filename
-from .auth import login_required, login_as_admin_required
+from .auth import login_required, login_as_admin_required, is_admin
 from .data_handler import (
     LP,
     StudyPeriod,
@@ -351,6 +351,11 @@ def _render_upload_form(meetings=None, selected_meeting=None):
     if meetings is None:
         meetings = fetch_meetings()
     requires = get_document_requires(selected_meeting.id) if selected_meeting else {}
+    deadline_passed = bool(
+        selected_meeting
+        and selected_meeting.deadline
+        and datetime.now() > selected_meeting.deadline
+    )
     return render_template(
         "upload.html",
         meetings=meetings,
@@ -360,6 +365,7 @@ def _render_upload_form(meetings=None, selected_meeting=None):
         division_doc_types=DivisionDocumentTypes,
         liberation_doc_types=LiberationDocumentTypes,
         requires=requires,
+        deadline_passed=deadline_passed,
     )
 
 
@@ -415,6 +421,21 @@ def document_upload():
     except ValueError:
         return _upload_error(
             "Please select a document type.", meetings, selected_meeting
+        )
+
+    # Enforce the upload deadline server-side. Meeting admins may still
+    # upload late (e.g. the agenda is finalized after the doc deadline);
+    # liberation documents are meeting-independent and unaffected.
+    if (
+        document_type != DocumentType.LIBERATION
+        and selected_meeting.deadline
+        and datetime.now() > selected_meeting.deadline
+        and not is_admin()
+    ):
+        return _upload_error(
+            "The upload deadline for this meeting has passed.",
+            meetings,
+            selected_meeting,
         )
 
     # Validate that personal (self) uploads are only meeting documents
