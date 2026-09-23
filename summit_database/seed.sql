@@ -75,18 +75,6 @@ CREATE TABLE IF NOT EXISTS DocumentRequire (
     PRIMARY KEY (document_type_id, meeting_id, gamma_owner_id)
 );
 
--- ============================================================================
--- Idempotent migrations: safe to re-run the whole file.
---
--- Postgres only executes this file on an EMPTY data volume
--- (docker-entrypoint-initdb.d), so existing databases must apply these
--- manually once per new migration:
---   docker compose exec summit_db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
---     -f /docker-entrypoint-initdb.d/seed.sql
--- ============================================================================
-
-ALTER TABLE Meetings ADD COLUMN IF NOT EXISTS deadline TIMESTAMP;
-
 -- Which liberation document types each SPECIFIC group (yearly instance,
 -- e.g. digit25) must submit, set by liberation admins. gamma_owner_id is
 -- the super-group that owns the uploaded documents; gamma_group_id and the
