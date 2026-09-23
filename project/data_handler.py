@@ -641,6 +641,12 @@ def delete_meeting_and_documents(meeting_id: int) -> bool:
                 "DELETE FROM DocumentRequire WHERE meeting_id = %s;", (meeting_id,)
             )
 
+            # Delete sent-mail records (the FK also cascades; explicit for
+            # symmetry with the rest of this function)
+            cur.execute(
+                "DELETE FROM SentMails WHERE meeting_id = %s;", (meeting_id,)
+            )
+
             # Delete meeting
             cur.execute("DELETE FROM Meetings WHERE meeting_id = %s;", (meeting_id,))
 
@@ -650,6 +656,138 @@ def delete_meeting_and_documents(meeting_id: int) -> bool:
         print(e)
         conn.rollback()
         return False
+
+
+def fetch_upcoming_meetings_with_deadline() -> list[Meeting]:
+    """Meetings that have a deadline and have not happened yet - the set the
+    mail scheduler cares about."""
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT meeting_id, meeting_date, deadline, StudyPeriods.study_period_id, study_year, study_period
+            FROM Meetings JOIN StudyPeriods ON Meetings.study_period_id=StudyPeriods.study_period_id
+            WHERE deadline IS NOT NULL AND meeting_date >= CURRENT_DATE
+            ORDER BY meeting_date;
+            """
+        )
+        rows = cur.fetchall()
+    return [_meeting_from_row(row) for row in rows]
+
+
+def get_missing_document_requires(meeting_id: int) -> dict[str, list[str]]:
+    """Required division documents each group has NOT yet uploaded for the
+    meeting's study period. Same shape as get_document_requires."""
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT dr.gamma_owner_id, dt.type_name
+            FROM DocumentRequire dr
+            JOIN DivisionDocumentTypes dt ON dr.document_type_id = dt.type_id
+            JOIN Meetings m ON dr.meeting_id = m.meeting_id
+            WHERE dr.meeting_id = %s
+              AND NOT EXISTS (
+                SELECT 1
+                FROM DivisionDocuments dd
+                JOIN Documents d ON d.document_id = dd.document_id
+                WHERE dd.type_id = dr.document_type_id
+                  AND dd.study_period_id = m.study_period_id
+                  AND d.gamma_owner_id = dr.gamma_owner_id
+              );
+            """,
+            (meeting_id,),
+        )
+        rows = cur.fetchall()
+
+    result: dict[str, list[str]] = {}
+    for group_id, doc_type in rows:
+        result.setdefault(group_id, []).append(doc_type)
+    return result
+
+
+def get_missing_liberation_documents(group_ids: list[str]) -> dict[str, list[str]]:
+    """Liberation document types each group has not uploaded yet.
+
+    The full set of types comes from the LiberationDocumentTypes enum, not
+    the database table: rows there are created lazily on first upload, so
+    the table is empty exactly when everything is missing.
+    """
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT d.gamma_owner_id, lt.type_name
+            FROM Documents d
+            JOIN LiberationDocuments ld ON d.document_id = ld.document_id
+            JOIN LiberationDocumentTypes lt ON ld.type_id = lt.type_id
+            WHERE d.gamma_owner_id = ANY(%s);
+            """,
+            (group_ids,),
+        )
+        uploaded = cur.fetchall()
+
+    uploaded_by_group: dict[str, set[str]] = {}
+    for group_id, type_name in uploaded:
+        uploaded_by_group.setdefault(group_id, set()).add(type_name)
+
+    all_types = [t.value for t in LiberationDocumentTypes]
+    result: dict[str, list[str]] = {}
+    for group_id in group_ids:
+        missing = [
+            t for t in all_types if t not in uploaded_by_group.get(group_id, set())
+        ]
+        if missing:
+            result[group_id] = missing
+    return result
+
+
+def has_sent_mail(
+    mail_type: str, meeting_id: int | None, gamma_owner_id: str | None
+) -> bool:
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1 FROM SentMails
+            WHERE mail_type = %s
+              AND meeting_id IS NOT DISTINCT FROM %s
+              AND gamma_owner_id IS NOT DISTINCT FROM %s;
+            """,
+            (mail_type, meeting_id, gamma_owner_id),
+        )
+        return cur.fetchone() is not None
+
+
+def record_sent_mail(
+    mail_type: str, meeting_id: int | None, gamma_owner_id: str | None
+) -> None:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            if gamma_owner_id is not None:
+                # Satisfy the FK even for groups that never uploaded
+                # anything and never had a requirement set.
+                cur.execute(
+                    "INSERT INTO DocumentOwners (gamma_owner_id) VALUES (%s) ON CONFLICT DO NOTHING;",
+                    (gamma_owner_id,),
+                )
+                cur.execute(
+                    "INSERT INTO Committees (gamma_group_id) VALUES (%s) ON CONFLICT DO NOTHING;",
+                    (gamma_owner_id,),
+                )
+            cur.execute(
+                """
+                INSERT INTO SentMails (mail_type, meeting_id, gamma_owner_id)
+                VALUES (%s, %s, %s)
+                ON CONFLICT ON CONSTRAINT sent_mails_unique DO NOTHING;
+                """,
+                (mail_type, meeting_id, gamma_owner_id),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def get_document_requires(meeting_id: int) -> dict[str, list[str]]:

@@ -86,3 +86,18 @@ CREATE TABLE IF NOT EXISTS DocumentRequire (
 -- ============================================================================
 
 ALTER TABLE Meetings ADD COLUMN IF NOT EXISTS deadline TIMESTAMP;
+
+-- Records which notification mails have been sent, so scheduler restarts
+-- and re-runs never double-send.
+CREATE TABLE IF NOT EXISTS SentMails (
+    sent_mail_id SERIAL PRIMARY KEY,
+    -- e.g. 'deadline_reminder' | 'deadline_reached' | 'duty_retirement_<year>'
+    mail_type TEXT NOT NULL,
+    -- NULL for mails not tied to a meeting (duty liberation)
+    meeting_id INTEGER REFERENCES Meetings(meeting_id) ON DELETE CASCADE,
+    -- NULL for board-wide mails (deadline reached)
+    gamma_owner_id TEXT REFERENCES DocumentOwners(gamma_owner_id),
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT sent_mails_unique
+        UNIQUE NULLS NOT DISTINCT (mail_type, meeting_id, gamma_owner_id)
+);
