@@ -85,6 +85,7 @@ class Meeting:
     id: int
     date: datetime.date
     study_period: StudyPeriod
+    deadline: datetime.datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,18 +103,20 @@ class Document:
 
 
 def create_meeting(
-    meeting_date: datetime.date, study_period: StudyPeriod
+    meeting_date: datetime.date,
+    study_period: StudyPeriod,
+    deadline: datetime.datetime | None = None,
 ) -> Meeting | None:
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO Meetings (meeting_date, study_period_id)
-                VALUES (%s, %s)
-                RETURNING meeting_id, meeting_date, study_period_id;
+                INSERT INTO Meetings (meeting_date, study_period_id, deadline)
+                VALUES (%s, %s, %s)
+                RETURNING meeting_id, meeting_date, deadline;
                 """,
-                (meeting_date, study_period.id),
+                (meeting_date, study_period.id, deadline),
             )
             meeting_data = cur.fetchone()
         conn.commit()
@@ -122,6 +125,7 @@ def create_meeting(
         return Meeting(
             id=meeting_data[0],
             date=meeting_data[1],
+            deadline=meeting_data[2],
             study_period=study_period,
         )
     except Exception as e:
@@ -130,33 +134,62 @@ def create_meeting(
         return None
 
 
+def _meeting_from_row(row: tuple) -> Meeting:
+    return Meeting(
+        id=row[0],
+        date=row[1],
+        deadline=row[2],
+        study_period=StudyPeriod(id=row[3], year=row[4], lp=LP(row[5])),
+    )
+
+
 def fetch_meetings() -> list[Meeting]:
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT meeting_id, meeting_date, StudyPeriods.study_period_id, study_year, study_period
+            SELECT meeting_id, meeting_date, deadline, StudyPeriods.study_period_id, study_year, study_period
             FROM Meetings JOIN StudyPeriods ON Meetings.study_period_id=StudyPeriods.study_period_id
             ORDER BY meeting_date DESC;
             """
         )
         meeting_data = cur.fetchall()
-    return list(map(lambda x: Meeting(*x[:2], StudyPeriod(*x[2:])), meeting_data))
+    return [_meeting_from_row(row) for row in meeting_data]
 
 
-def fetch_meeting(meeting_id) -> Meeting:
+def fetch_meeting(meeting_id) -> Meeting | None:
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT meeting_id, meeting_date, StudyPeriods.study_period_id, study_year, study_period
+            SELECT meeting_id, meeting_date, deadline, StudyPeriods.study_period_id, study_year, study_period
             FROM Meetings JOIN StudyPeriods ON Meetings.study_period_id=StudyPeriods.study_period_id
             WHERE meeting_id = %s;
             """,
             (meeting_id,),
         )
         meeting_data = cur.fetchone()
-    return Meeting(*meeting_data[:2], StudyPeriod(*meeting_data[2:]))
+    if meeting_data is None:
+        return None
+    return _meeting_from_row(meeting_data)
+
+
+def update_meeting_deadline(
+    meeting_id: int, deadline: datetime.datetime | None
+) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE Meetings SET deadline = %s WHERE meeting_id = %s;",
+                (deadline, meeting_id),
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(e)
+        conn.rollback()
+        return False
 
 
 def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
