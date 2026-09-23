@@ -506,18 +506,34 @@ def fetch_downloadable_documents_for_meeting(
     meeting_id: int, whitelist_group_ids: list[str]
 ) -> list[tuple]:
     """
-    Fetch division and liberation documents for a meeting.
-    Excludes meeting documents and only includes documents from whitelisted groups.
-    Returns list of tuples: (document_id, file_path, owner_id, doc_type, doc_subtype)
+    Fetch all documents for a meeting: the meeting documents themselves
+    (any owner - motions come from individual members), plus division and
+    liberation documents from whitelisted groups.
+    Returns list of tuples:
+    (document_id, document_name, file_path, owner_id, doc_type, doc_subtype)
     """
     conn = get_db()
     documents = []
 
     with conn.cursor() as cur:
+        # Fetch the meeting's own documents (motions, agenda, ...)
+        cur.execute(
+            """
+            SELECT d.document_id, d.document_name, d.file_path, d.gamma_owner_id, 'meeting'::text, mdt.type_name
+            FROM Documents d
+            JOIN MeetingDocuments md ON d.document_id = md.document_id
+            JOIN MeetingDocumentTypes mdt ON md.type_id = mdt.type_id
+            WHERE md.meeting_id = %s
+            ORDER BY d.uploaded DESC;
+            """,
+            (meeting_id,),
+        )
+        documents.extend(cur.fetchall())
+
         # Fetch division documents for the meeting's study period
         cur.execute(
             """
-            SELECT d.document_id, d.file_path, d.gamma_owner_id, 'division'::text, ddt.type_name
+            SELECT d.document_id, d.document_name, d.file_path, d.gamma_owner_id, 'division'::text, ddt.type_name
             FROM Documents d
             JOIN DivisionDocuments dd ON d.document_id = dd.document_id
             JOIN DivisionDocumentTypes ddt ON dd.type_id = ddt.type_id
@@ -532,7 +548,7 @@ def fetch_downloadable_documents_for_meeting(
         # Fetch liberation documents
         cur.execute(
             """
-            SELECT d.document_id, d.file_path, d.gamma_owner_id, 'liberation'::text, ldt.type_name
+            SELECT d.document_id, d.document_name, d.file_path, d.gamma_owner_id, 'liberation'::text, ldt.type_name
             FROM Documents d
             JOIN LiberationDocuments ld ON d.document_id = ld.document_id
             JOIN LiberationDocumentTypes ldt ON ld.type_id = ldt.type_id

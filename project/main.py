@@ -231,34 +231,39 @@ def download_meeting_documents(meeting_id):
     date_str = meeting.date.strftime("%Y%m%d")
     zip_filename = f"meeting_{lp_name}_{date_str}.zip"
 
+    year_short = meeting.study_period.year % 100
+
     zip_buffer = io.BytesIO()
+    used_names: set[str] = set()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for doc_id, file_path, owner_id, doc_type, doc_subtype in documents:
-            file_obj = file_path
-            if isinstance(file_path, str):
-                file_obj = file_path
-            else:
-                file_obj = str(file_path)
-
-            # Generate filename inside zip
-            doc_type_abbr = _abbreviate_doc_type(doc_subtype)
-            group_name = group_id_to_name.get(owner_id, "unknown").lower()
-            year_short = meeting.study_period.year % 100
-            filename_inside_zip = f"{doc_type_abbr}_{group_name}{year_short}_{lp_name}_{meeting.study_period.year}"
-
-            # Add file extension
-            if Path(file_obj).exists():
-                file_ext = Path(file_obj).suffix
-                filename_inside_zip += file_ext
-
-                with open(file_obj, "rb") as f:
-                    zip_file.writestr(filename_inside_zip, f.read())
-            else:
+        for doc_id, doc_name, file_path, owner_id, doc_type, doc_subtype in documents:
+            path = Path(file_path)
+            if not path.is_file():
                 logger.warning(
                     "Document %s skipped from zip: file missing on disk (%s)",
                     doc_id,
-                    file_obj,
+                    file_path,
                 )
+                continue
+
+            if doc_type == "meeting":
+                # Meeting documents can come from individual members - keep
+                # the uploaded name instead of a group-based one
+                base_name = (
+                    f"{_abbreviate_doc_type(doc_subtype)}_{Path(doc_name).stem}"
+                )
+            else:
+                doc_type_abbr = _abbreviate_doc_type(doc_subtype)
+                group_name = group_id_to_name.get(owner_id, "unknown").lower()
+                base_name = f"{doc_type_abbr}_{group_name}{year_short}_{lp_name}_{meeting.study_period.year}"
+
+            # Two documents of the same type must not overwrite each other
+            filename_inside_zip = f"{base_name}{path.suffix}"
+            if filename_inside_zip in used_names:
+                filename_inside_zip = f"{base_name}_{doc_id}{path.suffix}"
+            used_names.add(filename_inside_zip)
+
+            zip_file.writestr(filename_inside_zip, path.read_bytes())
 
     zip_buffer.seek(0)
     return send_file(
