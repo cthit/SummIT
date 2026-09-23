@@ -17,6 +17,7 @@
     {% endfor %}
   </select>
   <a href="{{ url_for('main.create_meeting_page') }}">Create Meeting</a>
+  <button onclick="sendLiberationMail()">Send Liberation Reminders</button>
 </div>
 
 <div id="requirementsContainer" class="hidden">
@@ -91,11 +92,17 @@ function deleteMeeting() {
 }
 
 function send_mail() {
-  if (currentMeetingId && confirm('Do you wanna send mail?')) {
-    fetch(`/admin/mail/send/${currentMeetingId}`, {
-        method: 'POST'
-      }
-    );
+  if (currentMeetingId && confirm('Send announcement mail to all groups with requirements?')) {
+    // Reload afterwards so the flash message from the route is shown
+    fetch(`/admin/mail/send/${currentMeetingId}`, { method: 'POST' })
+      .then(() => location.reload());
+  }
+}
+
+function sendLiberationMail() {
+  if (confirm('Send duty liberation reminders to groups with missing documents?')) {
+    fetch('/admin/mail/liberation', { method: 'POST' })
+      .then(() => location.reload());
   }
 }
 </script>
