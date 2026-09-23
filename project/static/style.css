@@ -9,6 +9,11 @@ div.navbar {
   justify-content: space-evenly;
 }
 
+.lang-switch {
+  font-size: 50%;
+  align-self: center;
+}
+
 .center-content {
   text-align: center;
 }

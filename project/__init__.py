@@ -6,6 +6,7 @@ from .auth import auth as auth_blueprint, set_user_in_g
 from .main import main as main_blueprint
 from .mail import mail as mail_blueprint
 from .database import db
+from .i18n import t
 from .tasks import register_cli
 from .error import (
     handle_file_too_large,
@@ -65,6 +66,8 @@ def create_app():
     app.register_blueprint(main_blueprint)
 
     app.register_blueprint(mail_blueprint)
+
+    app.jinja_env.globals["t"] = t
 
     register_cli(app)
 

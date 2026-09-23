@@ -11,31 +11,35 @@
   <body>
     <div class="navbar">
       <a href="{{ url_for('main.index') }}">
-        Home
+        {{ t('nav.home') }}
       </a>
       {% if g.user %}
         <a href="{{ url_for('main.doc') }}">
-          Documents
+          {{ t('nav.documents') }}
         </a>
         {% if session.get('admin') %}
         <a href="{{ url_for('main.admin') }}">
-          Meeting Admin
+          {{ t('nav.meeting_admin') }}
         </a>
         <a href="{{ url_for('main.liberation_admin') }}">
-          Liberation Admin
+          {{ t('nav.liberation_admin') }}
         </a>
         {% endif %}
         <a href="{{ url_for('main.profile') }}">
-          Profile
+          {{ t('nav.profile') }}
         </a>
         <a href="{{ url_for('auth.logout') }}">
-          Logout
+          {{ t('nav.logout') }}
         </a>
       {% else %}
         <a href="{{ url_for('auth.login') }}">
-          Login
+          {{ t('nav.login') }}
         </a>
       {% endif %}
+      <span class="lang-switch">
+        <a href="{{ url_for('main.set_language', lang_code='en') }}">EN</a>
+        <a href="{{ url_for('main.set_language', lang_code='sv') }}">SV</a>
+      </span>
     </div>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}

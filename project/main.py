@@ -11,6 +11,7 @@ from flask import (
     send_file,
     abort,
     jsonify,
+    session,
 )
 from datetime import date, datetime, time
 from pathlib import Path
@@ -47,6 +48,7 @@ from .data_handler import (
     get_missing_liberation_documents,
 )
 from .gamma import GammaService as gs
+from .i18n import LANGUAGES, t
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +150,13 @@ main = Blueprint("main", __name__)
 @main.route("/")
 def index():
     return render_template("index.html")
+
+
+@main.route("/lang/<lang_code>")
+def set_language(lang_code):
+    if lang_code in LANGUAGES:
+        session["lang"] = lang_code
+    return redirect(request.referrer or url_for("main.index"))
 
 
 @main.route("/profile")
