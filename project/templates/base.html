@@ -17,9 +17,14 @@
         <a href="{{ url_for('main.doc') }}">
           Documents
         </a>
+        {% if session.get('admin') %}
         <a href="{{ url_for('main.admin') }}">
-          Admin
+          Meeting Admin
         </a>
+        <a href="{{ url_for('main.liberation_admin') }}">
+          Liberation Admin
+        </a>
+        {% endif %}
         <a href="{{ url_for('main.profile') }}">
           Profile
         </a>

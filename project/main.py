@@ -41,6 +41,10 @@ from .data_handler import (
     delete_meeting_and_documents,
     remove_document_require,
     update_meeting_deadline,
+    get_liberation_requires,
+    set_liberation_require,
+    remove_liberation_require,
+    get_missing_liberation_documents,
 )
 from .gamma import GammaService as gs
 
@@ -189,6 +193,38 @@ def doc():
 @login_as_admin_required
 def admin():
     return render_template("admin.html", meetings=fetch_meetings())
+
+
+@main.route("/admin/liberation", methods=["GET", "POST"])
+@login_as_admin_required
+def liberation_admin():
+    groups = _get_meeting_form_data()["groups"]
+    liberation_doc_types = list(LiberationDocumentTypes)
+
+    if request.method == "POST":
+        # Clear all liberation requirements, then re-add from the form
+        existing = get_liberation_requires()
+        for group_id, doc_types in existing.items():
+            for doc_type in doc_types:
+                remove_liberation_require(group_id, doc_type)
+
+        for group in groups:
+            for doc_type in liberation_doc_types:
+                checkbox_name = f"{group['id']}_{doc_type.value}"
+                if request.form.get(checkbox_name):
+                    set_liberation_require(group["id"], doc_type.value)
+
+        flash("Liberation requirements updated.", "success")
+        return redirect(url_for("main.liberation_admin"))
+
+    return render_template(
+        "liberation_admin.html",
+        groups=groups,
+        liberation_doc_types=liberation_doc_types,
+        current_requires=get_liberation_requires(),
+        missing=get_missing_liberation_documents(),
+        owner_names={group["id"]: group["pretty_name"] for group in groups},
+    )
 
 
 @main.route("/admin/download-meeting/<int:meeting_id>")

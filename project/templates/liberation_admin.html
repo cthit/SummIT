@@ -1,0 +1,64 @@
+{% extends "base.html" %} {% block content %}
+<h1>Liberation Admin</h1>
+
+<h2>Required Liberation Documents</h2>
+<p>Tick the documents each group must submit for duty liberation.</p>
+<form method="post">
+  <table class="requirements-table">
+    <thead>
+      <tr>
+        <th>Group</th>
+        {% for doc_type in liberation_doc_types %}
+        <th>{{ doc_type.name.replace('_', ' ').title() }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in groups %}
+      <tr>
+        <td><strong>{{ group.pretty_name }}</strong></td>
+        {% for doc_type in liberation_doc_types %}
+        <td class="center">
+          <input type="checkbox"
+                 name="{{ group.id }}_{{ doc_type.value }}"
+                 {% if group.id in current_requires and doc_type.value in current_requires[group.id] %}checked{% endif %}>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="center-content">
+    <button type="submit">Save Requirements</button>
+  </div>
+</form>
+
+<h2>Missing Documents</h2>
+{% if missing %}
+<ul>
+  {% for group_id, doc_types in missing.items() %}
+  <li>
+    <strong>{{ owner_names.get(group_id, group_id) }}</strong>:
+    {{ doc_types | join(', ') }}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No required liberation documents are missing.</p>
+{% endif %}
+
+<div class="center-content">
+  <button onclick="sendLiberationMail()">Send Liberation Reminders</button>
+</div>
+
+<script>
+function sendLiberationMail() {
+  if (confirm('Send duty liberation reminders to groups with missing documents?')) {
+    fetch('{{ url_for("mail.send_liberation_mail_route") }}', { method: 'POST' })
+      .then(() => location.reload());
+  }
+}
+</script>
+
+{% endblock %}
