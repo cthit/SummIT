@@ -21,7 +21,6 @@ from werkzeug.utils import secure_filename
 from .auth import login_required, login_as_admin_required, is_admin
 from .data_handler import (
     LP,
-    DuplicateDocumentError,
     infer_study_period_from_date,
     create_meeting,
     fetch_meetings,
@@ -219,10 +218,8 @@ def download_meeting_documents(meeting_id):
     )
 
     if not documents:
-        return (
-            "No documents to download.",
-            400,
-        )  # TODO handle properly, sorry to whoever does
+        flash("No documents have been uploaded for this meeting yet.", "error")
+        return redirect(url_for("main.admin"))
 
     # Create zip file
     group_id_to_name = _get_group_id_to_name_map()
@@ -256,6 +253,12 @@ def download_meeting_documents(meeting_id):
 
                 with open(file_obj, "rb") as f:
                     zip_file.writestr(filename_inside_zip, f.read())
+            else:
+                logger.warning(
+                    "Document %s skipped from zip: file missing on disk (%s)",
+                    doc_id,
+                    file_obj,
+                )
 
     zip_buffer.seek(0)
     return send_file(
@@ -335,7 +338,8 @@ def create_meeting_page():
 
     meeting = create_meeting(meeting_date, sp, deadline)
     if not meeting:
-        flash("Failed to create meeting.", "error")
+        # create_meeting returns None only on a duplicate meeting date
+        flash(f"A meeting already exists on {meeting_date}.", "error")
         return redirect(url_for("main.admin"))
 
     # Save requirements
@@ -513,7 +517,9 @@ def document_upload():
             document_subtype.value,
             is_group,
         )
-    except DuplicateDocumentError as e:
+    except ValueError as e:
+        # DuplicateDocumentError and "Meeting does not exist." from
+        # upload_document both carry a user-appropriate message
         return _upload_error(str(e), meetings, selected_meeting)
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("main.doc"))
@@ -530,6 +536,15 @@ def download_document(document_id):
     if not doc:
         abort(404)
 
+    if not Path(doc["file_path"]).is_file():
+        logger.error("File missing on disk for document %s", document_id)
+        flash(
+            "The file for this document is missing on the server. "
+            "Please contact the meeting admins.",
+            "error",
+        )
+        return redirect(url_for("main.doc"))
+
     return send_file(doc["file_path"], as_attachment=True, download_name=doc["name"])
 
 
@@ -544,7 +559,10 @@ def delete_document_view(document_id):
     if success:
         flash("Document deleted successfully.", "success")
     else:
-        flash("Failed to delete document.", "error")
+        flash(
+            "Document not found, or you do not have permission to delete it.",
+            "error",
+        )
 
     return redirect(url_for("main.doc"))
 
