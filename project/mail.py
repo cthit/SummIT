@@ -100,62 +100,41 @@ def send_mail_route(meeting_id):
     return redirect(url_for("main.admin"))
 
 
-def _active_group_instances() -> dict[str, list[str]]:
-    """super_group_id -> active instance names (e.g. digIT -> ['digit25']).
-
-    Returns {} when Gamma is unavailable; callers fall back to the
-    super-group name.
-    """
-    try:
-        result: dict[str, list[str]] = {}
-        for group in gs.get_all_groups():
-            result.setdefault(group.super_group.id, []).append(group.name)
-        return result
-    except Exception:
-        current_app.logger.exception("Could not fetch group instances from Gamma")
-        return {}
-
-
 @mail.route("/admin/mail/liberation", methods=["POST"])
 @login_as_admin_required
 def send_liberation_mail_route():
     """Mail each group with missing duty liberation documents.
 
-    Recipients are the active group instances (prit25@, digit25@...), not
-    the super-group address. Manual admin trigger; deduped per calendar
-    year via SentMails, so it is safe to press the button twice and
-    re-sends automatically next year.
+    Each requirement names the specific responsible group instance
+    (prit25, digit25, ...), which is the mail recipient. Manual admin
+    trigger; deduped per calendar year via SentMails, so it is safe to
+    press the button twice and re-sends automatically next year.
     """
-    # Imported here to avoid an import cycle at module load
-    from .main import _get_groups
-
-    groups = _get_groups()
-    missing = get_missing_liberation_documents()
-    instances = _active_group_instances()
-
     mail_type = f"duty_retirement_{date.today().year}"
     sent = 0
-    for group_id, group_name, pretty_name in groups:
-        task_list = missing.get(group_id)
-        if not task_list:
+    for entry in get_missing_liberation_documents():
+        if has_sent_mail(mail_type, None, entry["group_id"]):
             continue
-        if has_sent_mail(mail_type, None, group_id):
-            continue
-        # Mail the yearly group instance(s), e.g. digit25@, falling back to
-        # the super-group address when Gamma gave us no instances
-        recipient_names = instances.get(group_id, [group_name])
         try:
             send_mail_config(
-                [f"{name}@chalmers.it" for name in recipient_names],
+                [f"{entry['group_name']}@chalmers.it"],
                 f"Duty liberation documents {date.today().year}",
                 "duty_retirement.txt",
-                {"group_name": pretty_name, "task_list": task_list},
+                {
+                    "group_name": entry["group_pretty_name"],
+                    "task_list": entry["missing"],
+                },
             )
         except Exception:
-            current_app.logger.exception("Liberation mail to %s failed", group_name)
-            flash(t("flash.mail_liberation_failed", group=pretty_name), "error")
+            current_app.logger.exception(
+                "Liberation mail to %s failed", entry["group_name"]
+            )
+            flash(
+                t("flash.mail_liberation_failed", group=entry["group_pretty_name"]),
+                "error",
+            )
             return redirect(url_for("main.liberation_admin"))
-        record_sent_mail(mail_type, None, group_id)
+        record_sent_mail(mail_type, None, entry["group_id"])
         sent += 1
 
     if sent:

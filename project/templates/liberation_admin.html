@@ -3,56 +3,112 @@
 
 <h2>{{ t('liberation.required_documents') }}</h2>
 <p>{{ t('liberation.grid_hint') }}</p>
-<form method="post">
-  <table class="requirements-table">
-    <thead>
-      <tr>
-        <th>{{ t('admin.group') }}</th>
-        {% for doc_type in liberation_doc_types %}
-        <th>{{ doc_type.name.replace('_', ' ').title() }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for group in groups %}
-      <tr>
-        <td><strong>{{ group.pretty_name }}</strong></td>
-        {% for doc_type in liberation_doc_types %}
-        <td class="center">
-          <input type="checkbox"
-                 name="{{ group.id }}_{{ doc_type.value }}"
-                 {% if group.id in current_requires and doc_type.value in current_requires[group.id] %}checked{% endif %}>
-        </td>
-        {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 
+{% if requirements %}
+<table class="requirements-table">
+  <thead>
+    <tr>
+      <th>{{ t('admin.group') }}</th>
+      <th>{{ t('liberation.committee') }}</th>
+      <th>{{ t('admin.requirements') }}</th>
+      <th>{{ t('liberation.missing') }}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for req in requirements %}
+    <tr>
+      <td><strong>{{ req.group_pretty_name }}</strong></td>
+      <td>{{ super_group_names.get(req.super_group_id, req.super_group_id) }}</td>
+      <td>{{ req.doc_types | join(', ') }}</td>
+      <td>
+        {% if req.group_id in missing_by_group %}
+          {{ missing_by_group[req.group_id] | join(', ') }}
+        {% else %}
+          {{ t('liberation.all_uploaded') }}
+        {% endif %}
+      </td>
+      <td>
+        <form method="post" class="inline-display"
+              action="{{ url_for('main.liberation_remove', group_id=req.group_id) }}">
+          <button type="submit">{{ t('liberation.remove') }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>{{ t('liberation.no_requirements') }}</p>
+{% endif %}
+
+<h2>{{ t('liberation.add_requirement') }}</h2>
+<form method="post" action="{{ url_for('main.liberation_add') }}">
+  <div>
+    <label for="superGroupSelect">{{ t('liberation.committee') }}:</label><br>
+    <select id="superGroupSelect" name="super_group_id" required onchange="loadInstances()">
+      <option value="">{{ t('liberation.select_committee') }}</option>
+      {% for group in groups %}
+      <option value="{{ group.id }}">{{ group.pretty_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="instanceSelect">{{ t('admin.group') }}:</label><br>
+    <select id="instanceSelect" name="group_id" required disabled>
+      <option value="">{{ t('liberation.select_committee_first') }}</option>
+    </select>
+  </div>
+  <div>
+    <label for="docTypeSelect">{{ t('upload.document_type') }}</label><br>
+    <select id="docTypeSelect" name="doc_type">
+      <option value="all">{{ t('liberation.all_types') }}</option>
+      {% for doc_type in liberation_doc_types %}
+      <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <input type="hidden" name="group_name" id="groupNameField">
+  <input type="hidden" name="group_pretty_name" id="groupPrettyField">
   <div class="center-content">
-    <button type="submit">{{ t('admin.save_requirements') }}</button>
+    <button type="submit">{{ t('liberation.add_requirement') }}</button>
   </div>
 </form>
-
-<h2>{{ t('liberation.missing') }}</h2>
-{% if missing %}
-<ul>
-  {% for group_id, doc_types in missing.items() %}
-  <li>
-    <strong>{{ owner_names.get(group_id, group_id) }}</strong>:
-    {{ doc_types | join(', ') }}
-  </li>
-  {% endfor %}
-</ul>
-{% else %}
-<p>{{ t('liberation.none_missing') }}</p>
-{% endif %}
 
 <div class="center-content">
   <button onclick="sendLiberationMail()">{{ t('liberation.send_reminders') }}</button>
 </div>
 
 <script>
+function loadInstances() {
+  const superId = document.getElementById('superGroupSelect').value;
+  const instanceSelect = document.getElementById('instanceSelect');
+  instanceSelect.innerHTML = '<option value="">{{ t('liberation.select_committee_first') }}</option>';
+  instanceSelect.disabled = true;
+  document.getElementById('groupNameField').value = '';
+  document.getElementById('groupPrettyField').value = '';
+  if (!superId) return;
+  fetch(`/admin/liberation/instances/${encodeURIComponent(superId)}`)
+    .then(r => r.json())
+    .then(instances => {
+      for (const inst of instances) {
+        const opt = document.createElement('option');
+        opt.value = inst.id;
+        opt.textContent = inst.pretty_name || inst.name;
+        opt.dataset.name = inst.name;
+        opt.dataset.pretty = inst.pretty_name || inst.name;
+        instanceSelect.appendChild(opt);
+      }
+      instanceSelect.disabled = false;
+    });
+}
+
+document.getElementById('instanceSelect').addEventListener('change', function () {
+  const opt = this.selectedOptions[0];
+  document.getElementById('groupNameField').value = opt ? (opt.dataset.name || '') : '';
+  document.getElementById('groupPrettyField').value = opt ? (opt.dataset.pretty || '') : '';
+});
+
 function sendLiberationMail() {
   if (confirm('{{ t('liberation.confirm_send') }}')) {
     fetch('{{ url_for("mail.send_liberation_mail_route") }}', { method: 'POST' })

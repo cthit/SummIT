@@ -78,7 +78,6 @@ TRANSLATIONS = {
     "admin.study_period_label": {"en": "Study Period:", "sv": "Läsperiod:"},
     "admin.pick_a_date": {"en": "pick a date", "sv": "välj ett datum"},
     "admin.cancel": {"en": "Cancel", "sv": "Avbryt"},
-    "admin.save_requirements": {"en": "Save Requirements", "sv": "Spara krav"},
     # Liberation admin
     "liberation.title": {"en": "Liberation Admin", "sv": "Ansvarsfrihetsadmin"},
     "liberation.required_documents": {
@@ -86,14 +85,27 @@ TRANSLATIONS = {
         "sv": "Krävda ansvarsfrihetsdokument",
     },
     "liberation.grid_hint": {
-        "en": "Tick the documents each group must submit for duty liberation.",
-        "sv": "Kryssa i vilka dokument varje grupp måste lämna in för ansvarsfrihet.",
+        "en": "Choose a committee, then the specific group in it that must submit liberation documents.",
+        "sv": "Välj en kommitté och sedan den specifika grupp inom den som ska lämna in ansvarsfrihetsdokument.",
+    },
+    "liberation.committee": {"en": "Committee", "sv": "Kommitté"},
+    "liberation.select_committee": {
+        "en": "Select committee...",
+        "sv": "Välj kommitté...",
+    },
+    "liberation.select_committee_first": {
+        "en": "Select a committee first",
+        "sv": "Välj kommitté först",
+    },
+    "liberation.all_types": {"en": "All document types", "sv": "Alla dokumenttyper"},
+    "liberation.add_requirement": {"en": "Add Requirement", "sv": "Lägg till krav"},
+    "liberation.remove": {"en": "Remove", "sv": "Ta bort"},
+    "liberation.all_uploaded": {"en": "All uploaded", "sv": "Allt uppladdat"},
+    "liberation.no_requirements": {
+        "en": "No liberation requirements set yet.",
+        "sv": "Inga ansvarsfrihetskrav har satts ännu.",
     },
     "liberation.missing": {"en": "Missing Documents", "sv": "Saknade dokument"},
-    "liberation.none_missing": {
-        "en": "No required liberation documents are missing.",
-        "sv": "Inga krävda ansvarsfrihetsdokument saknas.",
-    },
     "liberation.send_reminders": {
         "en": "Send Liberation Reminders",
         "sv": "Skicka ansvarsfrihetspåminnelser",
@@ -207,9 +219,17 @@ TRANSLATIONS = {
         "en": "No documents have been uploaded for this meeting yet.",
         "sv": "Inga dokument har laddats upp för detta möte ännu.",
     },
-    "flash.liberation_requirements_updated": {
-        "en": "Liberation requirements updated.",
-        "sv": "Ansvarsfrihetskrav uppdaterade.",
+    "flash.liberation_requirement_added": {
+        "en": "Liberation requirement added.",
+        "sv": "Ansvarsfrihetskrav tillagt.",
+    },
+    "flash.liberation_requirement_removed": {
+        "en": "Liberation requirement removed.",
+        "sv": "Ansvarsfrihetskrav borttaget.",
+    },
+    "flash.liberation_invalid": {
+        "en": "Invalid group selection.",
+        "sv": "Ogiltigt gruppval.",
     },
     # Flash messages: upload
     "flash.no_file": {"en": "No file selected.", "sv": "Ingen fil vald."},
