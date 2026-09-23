@@ -15,6 +15,7 @@ from pathlib import Path
 import os
 import io
 import zipfile
+from werkzeug.utils import secure_filename
 from .auth import login_required, login_as_admin_required
 from .data_handler import (
     LP,
@@ -42,6 +43,9 @@ from .data_handler import (
 )
 from .gamma import GammaService as gs
 
+
+# Allowed upload types: extension plus the file signature it must carry
+ALLOWED_UPLOAD_TYPES = {".pdf": b"%PDF-"}
 
 _FALLBACK_GROUPS = [
     ("dev-group-id-styrit", "styrit", "styrIT"),
@@ -461,9 +465,21 @@ def document_upload():
         actual_owner_id = owner_id
         is_group = True
 
+    # Only PDF files are accepted (#13): check both the extension and the
+    # file signature, and sanitize the name before it becomes part of a
+    # filesystem path.
+    data = uploaded_file.stream.read()
+    extension = Path(uploaded_file.filename or "").suffix.lower()
+    expected_signature = ALLOWED_UPLOAD_TYPES.get(extension)
+    if expected_signature is None or not data.startswith(expected_signature):
+        return _upload_error(
+            "Only PDF files are allowed.", meetings, selected_meeting
+        )
+    file_name = secure_filename(uploaded_file.filename) or "document.pdf"
+
     upload_document(
-        uploaded_file.stream.read(),
-        uploaded_file.filename,
+        data,
+        file_name,
         DocumentOwner(actual_owner_id),
         meeting_id if document_type != DocumentType.LIBERATION else None,
         document_type,
