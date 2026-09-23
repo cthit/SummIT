@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS StudyPeriods (
 CREATE TABLE IF NOT EXISTS Meetings (
     meeting_id SERIAL PRIMARY KEY,
     meeting_date DATE UNIQUE,
-    study_period_id INTEGER REFERENCES StudyPeriods(study_period_id)
+    study_period_id INTEGER REFERENCES StudyPeriods(study_period_id),
+    -- Upload deadline for the meeting's documents (server-local time)
+    deadline TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS DocumentOwners (
@@ -72,3 +74,15 @@ CREATE TABLE IF NOT EXISTS DocumentRequire (
     gamma_owner_id TEXT REFERENCES DocumentOwners(gamma_owner_id),
     PRIMARY KEY (document_type_id, meeting_id, gamma_owner_id)
 );
+
+-- ============================================================================
+-- Idempotent migrations: safe to re-run the whole file.
+--
+-- Postgres only executes this file on an EMPTY data volume
+-- (docker-entrypoint-initdb.d), so existing databases must apply these
+-- manually once per new migration:
+--   docker compose exec summit_db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+--     -f /docker-entrypoint-initdb.d/seed.sql
+-- ============================================================================
+
+ALTER TABLE Meetings ADD COLUMN IF NOT EXISTS deadline TIMESTAMP;
