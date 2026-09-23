@@ -9,24 +9,13 @@
   </div>
 
   <div>
-    <label for="year"><strong>Year</strong></label><br>
-    <select id="year" name="year" required {% if meeting %}disabled{% endif %}>
-      {% for y in years %}
-      <option value="{{ y }}" 
-              {% if meeting and meeting.study_period.year == y %}selected
-              {% elif not meeting and y == current_year %}selected{% endif %}>{{ y }}</option>
-      {% endfor %}
-    </select>
-  </div>
-
-  <div>
-    <label for="lp"><strong>Study Period</strong></label><br>
-    <select id="lp" name="lp" required {% if meeting %}disabled{% endif %}>
-      {% for value, name in lps %}
-      <option value="{{ value }}"
-              {% if meeting and meeting.study_period.lp == value %}selected{% endif %}>{{ name }}</option>
-      {% endfor %}
-    </select>
+    <strong>Study Period:</strong>
+    {% if meeting %}
+      {% if meeting.study_period.lp|int == 5 %}Summer{% else %}LP{{ meeting.study_period.lp|int }}{% endif %}
+      {{ meeting.study_period.year }}
+    {% else %}
+      <span id="sp-preview">pick a date</span>
+    {% endif %}
   </div>
 
   <h2>Document Requirements</h2>
@@ -60,5 +49,25 @@
     <a href="{{ url_for('main.admin') }}">Cancel</a>
   </div>
 </form>
+
+{% if not meeting %}
+<script>
+  document.getElementById("meeting_date").addEventListener("change", function () {
+    const preview = document.getElementById("sp-preview");
+    if (!this.value) {
+      preview.textContent = "pick a date";
+      return;
+    }
+    fetch(`/admin/infer-study-period?date=${encodeURIComponent(this.value)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        preview.textContent = data.label || "unknown";
+      })
+      .catch(() => {
+        preview.textContent = "unknown";
+      });
+  });
+</script>
+{% endif %}
 
 {% endblock %}

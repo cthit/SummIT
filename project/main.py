@@ -19,6 +19,7 @@ from .auth import login_required, login_as_admin_required
 from .data_handler import (
     LP,
     StudyPeriod,
+    infer_study_period_from_date,
     create_meeting,
     fetch_meetings,
     lookup_study_period,
@@ -101,9 +102,6 @@ def _get_groups():
 def _get_meeting_form_data():
     groups = _get_groups()
     return {
-        "years": list(range(date.today().year - 1, date.today().year + 3)),
-        "lps": [(lp.value, lp.name) for lp in LP],
-        "current_year": date.today().year,
         "groups": [
             {"id": group_id, "name": group_name, "pretty_name": group_pretty_name}
             for group_id, group_name, group_pretty_name in groups
@@ -276,6 +274,21 @@ def get_meeting_requirements_json(meeting_id):
     )
 
 
+@main.route("/admin/infer-study-period")
+@login_as_admin_required
+def infer_study_period_json():
+    """Preview endpoint so the create-meeting form can show the inferred
+    study period without duplicating the boundary rules in JS."""
+    date_str = request.args.get("date", "")
+    try:
+        d = date.fromisoformat(date_str)
+    except ValueError:
+        return jsonify({"error": "invalid date"}), 400
+    year, lp = infer_study_period_from_date(d)
+    label = "Summer" if lp == LP.SUMMER else f"LP{int(lp)}"
+    return jsonify({"year": year, "lp": int(lp), "label": f"{label} {year}"})
+
+
 @main.route("/admin/create-meeting", methods=["GET", "POST"])
 @login_as_admin_required
 def create_meeting_page():
@@ -285,20 +298,19 @@ def create_meeting_page():
         return render_template("create_meeting.html", **form_data, current_requires={})
 
     meeting_date_str = request.form.get("meeting_date")
-    year_str = request.form.get("year")
-    lp_str = request.form.get("lp")
 
-    if not meeting_date_str or not year_str or not lp_str:
-        flash("All fields are required.", "error")
+    if not meeting_date_str:
+        flash("Meeting date is required.", "error")
         return redirect(url_for("main.admin"))
 
     try:
-        y = int(year_str)
-        lp = LP(int(lp_str))
         meeting_date = date.fromisoformat(meeting_date_str)
-    except Exception:
-        flash("Invalid input.", "error")
+    except ValueError:
+        flash("Invalid meeting date.", "error")
         return redirect(url_for("main.admin"))
+
+    # Year and study period are derived from the date (issues #6/#7)
+    y, lp = infer_study_period_from_date(meeting_date)
 
     sp = lookup_study_period(y, lp)
     if sp is None:
