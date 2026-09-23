@@ -6,11 +6,9 @@ from flask import (
 )
 
 from .auth import login_as_admin_required
-from .mail_example import example_simple_mail
 from .data_handler import get_document_requires, fetch_meeting
-from .mail_handler import send_mail, send_mail_config
+from .mail_handler import send_mail_config
 from .gamma import GammaService as gs
-from pathlib import Path
 
 
 mail = Blueprint("mail", __name__)
@@ -45,8 +43,8 @@ def send_mail_route(meeting_id):
 
         send_mail_config(
             [f"{group.name}@chalmers.it"],
-            f"Meeting Anouncement {"Summer" if lp==5 else f"lp{lp}"} {year}",
-            Path("project/mail_config/meeting_announcement.txt"),
+            f"Meeting Announcement {"Summer" if lp==5 else f"lp{lp}"} {year}",
+            "meeting_announcement.txt",
             vars,
         )
 

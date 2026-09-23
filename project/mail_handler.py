@@ -46,14 +46,27 @@ def send_mail(to: list[str], subject: str, body: str):
     return response.json()
 
 
-def send_mail_config(to: list[str], subject: str, config: Path, vars: dict[str, str]):
-    """
-    Based on given config, should populate the varaiables and send mail
+TEMPLATE_DIR = Path(__file__).parent / "mail_config"
 
+
+def send_mail_config(
+    to: list[str], subject: str, config: Path | str, vars: dict[str, str]
+):
+    """Render the given mail template with the variables and send it.
+
+    Templates are resolved inside project/mail_config/ regardless of the
+    process working directory. StrictUndefined makes a missing variable an
+    error instead of silently rendering as empty text.
     """
-    with open(config) as f:
+    config_path = Path(config)
+    if not config_path.is_absolute():
+        config_path = TEMPLATE_DIR / config_path.name
+
+    with open(config_path) as f:
         c = f.read()
 
-    body = jinja2.Template(c).render(**(get_static_values() | vars))
+    body = jinja2.Template(c, undefined=jinja2.StrictUndefined).render(
+        **(get_static_values() | vars)
+    )
 
     send_mail(to, subject, body)

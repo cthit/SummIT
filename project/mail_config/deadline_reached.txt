@@ -2,7 +2,14 @@ Dear {{ board_display_name }},
 
 The deadline for document submission for the meeting on {{ meeting_date }} has been reached.
 
-Groups have uploaded their documents and they are now available for review.
+{% if missing %}
+The following required documents were NOT uploaded:
+{% for item in missing %}
+- {{ item }}
+{% endfor %}
+{% else %}
+All required documents were uploaded.
+{% endif %}
 
 You can access all submitted documents at: {{ frontend_url }}
 
@@ -11,4 +18,4 @@ Meeting details:
 - Document deadline was: {{ deadline_date }} at {{ deadline_time }}
 
 Best regards,
-{secretary_display_name}
+{{ secretary_display_name }}
