@@ -12,7 +12,7 @@ from flask import (
     abort,
     jsonify,
 )
-from datetime import date, datetime
+from datetime import date, datetime, time
 from pathlib import Path
 import os
 import io
@@ -317,7 +317,9 @@ def create_meeting_page():
 
     try:
         meeting_date = date.fromisoformat(meeting_date_str)
-        deadline = datetime.fromisoformat(deadline_str)
+        # The deadline is always 23:59 (server-local Swedish time) on the
+        # chosen day
+        deadline = datetime.combine(date.fromisoformat(deadline_str), time(23, 59))
     except ValueError:
         flash("Invalid meeting date or deadline.", "error")
         return redirect(url_for("main.admin"))
@@ -596,7 +598,9 @@ def manage_meeting(meeting_id):
         deadline = None
         if deadline_str:
             try:
-                deadline = datetime.fromisoformat(deadline_str)
+                deadline = datetime.combine(
+                    date.fromisoformat(deadline_str), time(23, 59)
+                )
             except ValueError:
                 flash("Invalid deadline.", "error")
                 return redirect(url_for("main.manage_meeting", meeting_id=meeting_id))
