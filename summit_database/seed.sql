@@ -87,6 +87,14 @@ CREATE TABLE IF NOT EXISTS DocumentRequire (
 
 ALTER TABLE Meetings ADD COLUMN IF NOT EXISTS deadline TIMESTAMP;
 
+-- Which liberation document types each group must submit, set by
+-- liberation admins (analogous to DocumentRequire, but not meeting-bound).
+CREATE TABLE IF NOT EXISTS LiberationRequire (
+    document_type_id INTEGER REFERENCES LiberationDocumentTypes(type_id),
+    gamma_owner_id TEXT REFERENCES DocumentOwners(gamma_owner_id),
+    PRIMARY KEY (document_type_id, gamma_owner_id)
+);
+
 -- Records which notification mails have been sent, so scheduler restarts
 -- and re-runs never double-send.
 CREATE TABLE IF NOT EXISTS SentMails (

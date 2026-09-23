@@ -735,13 +735,97 @@ def get_missing_document_requires(meeting_id: int) -> dict[str, list[str]]:
     return result
 
 
-def get_missing_liberation_documents(group_ids: list[str]) -> dict[str, list[str]]:
-    """Liberation document types each group has not uploaded yet.
+def get_liberation_requires() -> dict[str, list[str]]:
+    """{group_id: [liberation doc types required from it]}, as configured by
+    liberation admins."""
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT lr.gamma_owner_id, lt.type_name
+            FROM LiberationRequire lr
+            JOIN LiberationDocumentTypes lt ON lr.document_type_id = lt.type_id;
+            """
+        )
+        rows = cur.fetchall()
 
-    The full set of types comes from the LiberationDocumentTypes enum, not
-    the database table: rows there are created lazily on first upload, so
-    the table is empty exactly when everything is missing.
-    """
+    result: dict[str, list[str]] = {}
+    for group_id, doc_type in rows:
+        result.setdefault(group_id, []).append(doc_type)
+    return result
+
+
+def set_liberation_require(group_id: str, doc_type_name: str) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # Ensure document owner exists
+            cur.execute(
+                "INSERT INTO DocumentOwners (gamma_owner_id) VALUES (%s) ON CONFLICT DO NOTHING;",
+                (group_id,),
+            )
+            cur.execute(
+                "INSERT INTO Committees (gamma_group_id) VALUES (%s) ON CONFLICT DO NOTHING;",
+                (group_id,),
+            )
+
+            # Get or create the type row (rows are otherwise created lazily
+            # on first upload)
+            cur.execute(
+                "SELECT type_id FROM LiberationDocumentTypes WHERE type_name = %s;",
+                (doc_type_name,),
+            )
+            row = cur.fetchone()
+            if not row:
+                cur.execute(
+                    "INSERT INTO LiberationDocumentTypes (type_name) VALUES (%s) RETURNING type_id;",
+                    (doc_type_name,),
+                )
+                row = cur.fetchone()
+
+            cur.execute(
+                "INSERT INTO LiberationRequire (document_type_id, gamma_owner_id) VALUES (%s, %s) ON CONFLICT DO NOTHING;",
+                (row[0], group_id),
+            )
+        conn.commit()
+        return True
+    except Exception:
+        logger.exception("set_liberation_require failed")
+        conn.rollback()
+        raise
+
+
+def remove_liberation_require(group_id: str, doc_type_name: str) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT type_id FROM LiberationDocumentTypes WHERE type_name = %s;",
+                (doc_type_name,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return False
+
+            cur.execute(
+                "DELETE FROM LiberationRequire WHERE document_type_id = %s AND gamma_owner_id = %s;",
+                (row[0], group_id),
+            )
+        conn.commit()
+        return True
+    except Exception:
+        logger.exception("remove_liberation_require failed")
+        conn.rollback()
+        raise
+
+
+def get_missing_liberation_documents() -> dict[str, list[str]]:
+    """Required liberation documents (per LiberationRequire) each group has
+    not uploaded yet."""
+    required = get_liberation_requires()
+    if not required:
+        return {}
+
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(
@@ -752,7 +836,7 @@ def get_missing_liberation_documents(group_ids: list[str]) -> dict[str, list[str
             JOIN LiberationDocumentTypes lt ON ld.type_id = lt.type_id
             WHERE d.gamma_owner_id = ANY(%s);
             """,
-            (group_ids,),
+            (list(required.keys()),),
         )
         uploaded = cur.fetchall()
 
@@ -760,11 +844,10 @@ def get_missing_liberation_documents(group_ids: list[str]) -> dict[str, list[str
     for group_id, type_name in uploaded:
         uploaded_by_group.setdefault(group_id, set()).add(type_name)
 
-    all_types = [t.value for t in LiberationDocumentTypes]
     result: dict[str, list[str]] = {}
-    for group_id in group_ids:
+    for group_id, types in required.items():
         missing = [
-            t for t in all_types if t not in uploaded_by_group.get(group_id, set())
+            t for t in types if t not in uploaded_by_group.get(group_id, set())
         ]
         if missing:
             result[group_id] = missing

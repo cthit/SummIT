@@ -115,7 +115,7 @@ def send_liberation_mail_route():
     from .main import _get_groups
 
     groups = _get_groups()
-    missing = get_missing_liberation_documents([group_id for group_id, _, _ in groups])
+    missing = get_missing_liberation_documents()
 
     mail_type = f"duty_retirement_{date.today().year}"
     sent = 0
