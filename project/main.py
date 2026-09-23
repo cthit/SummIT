@@ -342,6 +342,25 @@ def create_meeting_page():
     return redirect(url_for("main.admin"))
 
 
+def _render_upload_form(meetings=None, selected_meeting=None):
+    if meetings is None:
+        meetings = fetch_meetings()
+    return render_template(
+        "upload.html",
+        meetings=meetings,
+        selected_meeting=selected_meeting,
+        user=g.user,
+        meeting_doc_types=MeetingDocumentTypes,
+        division_doc_types=DivisionDocumentTypes,
+        liberation_doc_types=LiberationDocumentTypes,
+    )
+
+
+def _upload_error(message, meetings=None, selected_meeting=None):
+    flash(message, "error")
+    return _render_upload_form(meetings, selected_meeting)
+
+
 @main.route("/documents/upload", methods=["POST", "GET"])
 @login_required
 def document_upload():
@@ -349,15 +368,7 @@ def document_upload():
         meetings = fetch_meetings()
         selected_id = request.args.get("meeting_id", type=int)
         selected_meeting = next((m for m in meetings if m.id == selected_id), None)
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=selected_meeting,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
-        )
+        return _render_upload_form(meetings, selected_meeting)
 
     uploaded_file = request.files.get("file")
     meeting_id = request.form.get("meeting_id", type=int)
@@ -373,132 +384,66 @@ def document_upload():
         )
     )
 
+    meetings = fetch_meetings()
+    selected_meeting = (
+        next((m for m in meetings if m.id == meeting_id), None) if meeting_id else None
+    )
+
     if not uploaded_file:
-        flash("No file selected.", "error")
-        meetings = fetch_meetings()
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
-        )
+        return _upload_error("No file selected.", meetings, selected_meeting)
 
     # Meeting is only required for meeting and division documents.
     # Validate that the submitted id refers to a real meeting: a forged or
     # stale id would otherwise crash upload_document further down.
-    if document_type_str != "liberation":
-        meetings = fetch_meetings()
-        selected_meeting = (
-            next((m for m in meetings if m.id == meeting_id), None)
-            if meeting_id
-            else None
-        )
-        if not selected_meeting:
-            flash("Please select a valid meeting.", "error")
-            return render_template(
-                "upload.html",
-                meetings=meetings,
-                selected_meeting=None,
-                user=g.user,
-                meeting_doc_types=MeetingDocumentTypes,
-                division_doc_types=DivisionDocumentTypes,
-                liberation_doc_types=LiberationDocumentTypes,
-            )
+    if document_type_str != "liberation" and not selected_meeting:
+        return _upload_error("Please select a valid meeting.", meetings)
 
     if not owner_id:
-        flash("Please select who to upload as.", "error")
-        meetings = fetch_meetings()
-        selected_meeting = (
-            next((m for m in meetings if m.id == meeting_id), None)
-            if meeting_id
-            else None
-        )
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=selected_meeting,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
+        return _upload_error(
+            "Please select who to upload as.", meetings, selected_meeting
         )
 
     try:
         document_type = DocumentType(document_type_str)
     except ValueError:
-        flash("Please select a document type.", "error")
-        meetings = fetch_meetings()
-        selected_meeting = (
-            next((m for m in meetings if m.id == meeting_id), None)
-            if meeting_id
-            else None
-        )
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=selected_meeting,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
+        return _upload_error(
+            "Please select a document type.", meetings, selected_meeting
         )
 
     # Validate that personal (self) uploads are only meeting documents
     if owner_id == "self" and document_type != DocumentType.MEETING:
-        flash("You can only upload meeting documents as yourself.", "error")
-        meetings = fetch_meetings()
-        selected_meeting = (
-            next((m for m in meetings if m.id == meeting_id), None)
-            if meeting_id
-            else None
-        )
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=selected_meeting,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
+        return _upload_error(
+            "You can only upload meeting documents as yourself.",
+            meetings,
+            selected_meeting,
         )
 
     # Validate that personal (self) uploads are only motion or other subtypes
     if owner_id == "self" and document_subtype_str not in ["motion", "other"]:
-        flash("You can only upload motions or other documents as yourself.", "error")
-        meetings = fetch_meetings()
-        selected_meeting = (
-            next((m for m in meetings if m.id == meeting_id), None)
-            if meeting_id
-            else None
-        )
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=selected_meeting,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
+        return _upload_error(
+            "You can only upload motions or other documents as yourself.",
+            meetings,
+            selected_meeting,
         )
 
     if not document_subtype_str:
-        flash("Please select a document subtype.", "error")
-        meetings = fetch_meetings()
-        selected_meeting = (
-            next((m for m in meetings if m.id == meeting_id), None)
-            if meeting_id
-            else None
+        return _upload_error(
+            "Please select a document subtype.", meetings, selected_meeting
         )
-        return render_template(
-            "upload.html",
-            meetings=meetings,
-            selected_meeting=selected_meeting,
-            user=g.user,
-            meeting_doc_types=MeetingDocumentTypes,
-            division_doc_types=DivisionDocumentTypes,
-            liberation_doc_types=LiberationDocumentTypes,
+
+    # Validate the subtype against the known types - upload_document inserts
+    # the value into the *DocumentTypes tables, so a raw form string would
+    # let form tampering pollute them.
+    subtype_enum = {
+        DocumentType.MEETING: MeetingDocumentTypes,
+        DocumentType.DIVISION: DivisionDocumentTypes,
+        DocumentType.LIBERATION: LiberationDocumentTypes,
+    }[document_type]
+    try:
+        document_subtype = subtype_enum(document_subtype_str)
+    except ValueError:
+        return _upload_error(
+            "Please select a valid document subtype.", meetings, selected_meeting
         )
 
     # Determine the actual owner ID (self or group). A user may only
@@ -510,21 +455,8 @@ def document_upload():
     else:
         allowed_group_ids = {grp.get("id") for grp in g.user.get("groups", [])}
         if owner_id not in allowed_group_ids:
-            flash("You are not a member of that group.", "error")
-            meetings = fetch_meetings()
-            selected_meeting = (
-                next((m for m in meetings if m.id == meeting_id), None)
-                if meeting_id
-                else None
-            )
-            return render_template(
-                "upload.html",
-                meetings=meetings,
-                selected_meeting=selected_meeting,
-                user=g.user,
-                meeting_doc_types=MeetingDocumentTypes,
-                division_doc_types=DivisionDocumentTypes,
-                liberation_doc_types=LiberationDocumentTypes,
+            return _upload_error(
+                "You are not a member of that group.", meetings, selected_meeting
             )
         actual_owner_id = owner_id
         is_group = True
@@ -535,7 +467,7 @@ def document_upload():
         DocumentOwner(actual_owner_id),
         meeting_id if document_type != DocumentType.LIBERATION else None,
         document_type,
-        document_subtype_str,
+        document_subtype.value,
         is_group,
     )
     flash("Document uploaded successfully.", "success")
