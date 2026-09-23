@@ -4,8 +4,16 @@
 <form method="post">
   <div>
     <label for="meeting_date"><strong>Meeting Date</strong></label><br>
-    <input id="meeting_date" name="meeting_date" type="date" 
+    <input id="meeting_date" name="meeting_date" type="date"
            value="{% if meeting %}{{ meeting.date }}{% endif %}" required {% if meeting %}disabled{% endif %} />
+  </div>
+
+  <div>
+    <label for="deadline"><strong>Upload Deadline</strong></label><br>
+    {# Stays editable in edit mode, unlike the date - clearing it removes the deadline #}
+    <input id="deadline" name="deadline" type="datetime-local"
+           value="{% if meeting and meeting.deadline %}{{ meeting.deadline.strftime('%Y-%m-%dT%H:%M') }}{% endif %}"
+           {% if not meeting %}required{% endif %} />
   </div>
 
   <div>

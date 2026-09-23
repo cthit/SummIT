@@ -10,7 +10,7 @@ from flask import (
     abort,
     jsonify,
 )
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 import os
 import io
@@ -38,6 +38,7 @@ from .data_handler import (
     delete_document,
     delete_meeting_and_documents,
     remove_document_require,
+    update_meeting_deadline,
 )
 from .gamma import GammaService as gs
 
@@ -298,15 +299,21 @@ def create_meeting_page():
         return render_template("create_meeting.html", **form_data, current_requires={})
 
     meeting_date_str = request.form.get("meeting_date")
+    deadline_str = request.form.get("deadline")
 
-    if not meeting_date_str:
-        flash("Meeting date is required.", "error")
+    if not meeting_date_str or not deadline_str:
+        flash("Meeting date and upload deadline are required.", "error")
         return redirect(url_for("main.admin"))
 
     try:
         meeting_date = date.fromisoformat(meeting_date_str)
+        deadline = datetime.fromisoformat(deadline_str)
     except ValueError:
-        flash("Invalid meeting date.", "error")
+        flash("Invalid meeting date or deadline.", "error")
+        return redirect(url_for("main.admin"))
+
+    if deadline.date() > meeting_date:
+        flash("Deadline must be on or before the meeting date.", "error")
         return redirect(url_for("main.admin"))
 
     # Year and study period are derived from the date (issues #6/#7)
@@ -319,7 +326,7 @@ def create_meeting_page():
             flash("Failed to create study period.", "error")
             return redirect(url_for("main.admin"))
 
-    meeting = create_meeting(meeting_date, sp)
+    meeting = create_meeting(meeting_date, sp, deadline)
     if not meeting:
         flash("Failed to create meeting.", "error")
         return redirect(url_for("main.admin"))
@@ -589,6 +596,22 @@ def manage_meeting(meeting_id):
     form_data = _get_meeting_form_data()
 
     if request.method == "POST":
+        # Update the deadline (an empty field clears it)
+        deadline_str = request.form.get("deadline")
+        deadline = None
+        if deadline_str:
+            try:
+                deadline = datetime.fromisoformat(deadline_str)
+            except ValueError:
+                flash("Invalid deadline.", "error")
+                return redirect(url_for("main.manage_meeting", meeting_id=meeting_id))
+            if deadline.date() > meeting.date:
+                flash("Deadline must be on or before the meeting date.", "error")
+                return redirect(url_for("main.manage_meeting", meeting_id=meeting_id))
+        if not update_meeting_deadline(meeting_id, deadline):
+            flash("Failed to update deadline.", "error")
+            return redirect(url_for("main.admin"))
+
         # Clear all requirements for this meeting first
         existing = get_document_requires(meeting_id)
         for group_id, doc_types in existing.items():
