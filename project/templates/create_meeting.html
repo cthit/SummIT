@@ -1,16 +1,16 @@
 {% extends "base.html" %} {% block content %}
-<h1>{% if meeting %}Edit Meeting{% else %}Create Meeting{% endif %}</h1>
+<h1>{% if meeting %}{{ t('admin.edit_meeting') }}{% else %}{{ t('admin.create_meeting') }}{% endif %}</h1>
 
 <form method="post">
   <div>
-    <label for="meeting_date"><strong>Meeting Date</strong></label><br>
+    <label for="meeting_date"><strong>{{ t('admin.meeting_date') }}</strong></label><br>
     <input id="meeting_date" name="meeting_date" type="date"
            value="{% if meeting %}{{ meeting.date }}{% endif %}" required {% if meeting %}disabled{% endif %} />
   </div>
 
   <div>
-    <label for="deadline"><strong>Upload Deadline</strong></label>
-    (documents are due 23:59 that day)<br>
+    <label for="deadline"><strong>{{ t('admin.deadline') }}</strong></label>
+    {{ t('admin.deadline_hint') }}<br>
     {# Stays editable in edit mode, unlike the date - clearing it removes the deadline #}
     <input id="deadline" name="deadline" type="date"
            value="{% if meeting and meeting.deadline %}{{ meeting.deadline.strftime('%Y-%m-%d') }}{% endif %}"
@@ -18,20 +18,20 @@
   </div>
 
   <div>
-    <strong>Study Period:</strong>
+    <strong>{{ t('admin.study_period_label') }}</strong>
     {% if meeting %}
-      {% if meeting.study_period.lp|int == 5 %}Summer{% else %}LP{{ meeting.study_period.lp|int }}{% endif %}
+      {% if meeting.study_period.lp|int == 5 %}{{ t('meeting.summer') }}{% else %}LP{{ meeting.study_period.lp|int }}{% endif %}
       {{ meeting.study_period.year }}
     {% else %}
-      <span id="sp-preview">pick a date</span>
+      <span id="sp-preview">{{ t('admin.pick_a_date') }}</span>
     {% endif %}
   </div>
 
-  <h2>Document Requirements</h2>
+  <h2>{{ t('admin.requirements') }}</h2>
   <table class="requirements-table">
     <thead>
       <tr>
-        <th>Group</th>
+        <th>{{ t('admin.group') }}</th>
         {% for doc_type in division_doc_types %}
         <th>{{ doc_type.name.replace('_', ' ').title() }}</th>
         {% endfor %}
@@ -54,8 +54,8 @@
   </table>
 
   <div class="center-content">
-    <button type="submit">{% if meeting %}Update Meeting{% else %}Create Meeting{% endif %}</button>
-    <a href="{{ url_for('main.admin') }}">Cancel</a>
+    <button type="submit">{% if meeting %}{{ t('admin.update_meeting') }}{% else %}{{ t('admin.create_meeting') }}{% endif %}</button>
+    <a href="{{ url_for('main.admin') }}">{{ t('admin.cancel') }}</a>
   </div>
 </form>
 
@@ -64,7 +64,7 @@
   document.getElementById("meeting_date").addEventListener("change", function () {
     const preview = document.getElementById("sp-preview");
     if (!this.value) {
-      preview.textContent = "pick a date";
+      preview.textContent = "{{ t('admin.pick_a_date') }}";
       return;
     }
     fetch(`/admin/infer-study-period?date=${encodeURIComponent(this.value)}`)

@@ -1,10 +1,10 @@
 {% extends "base.html" %} {% block content %}
 <div>
-  <h3>Login</h3>
+  <h3>{{ t('login.title') }}</h3>
   <div>
     <form action="{{ url_for('auth.authorize') }}" method="get">
       <div>
-        <label>Select Extra Access Groups:</label>
+        <label>{{ t('login.extra_groups') }}</label>
         <div>
           <label>
             <input type="checkbox" name="extra_groups" value="digit" />
@@ -42,7 +42,7 @@
           <button
             type="submit"
           >
-            Login
+            {{ t('login.button') }}
           </button>
         </div>
       </div>

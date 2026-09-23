@@ -22,6 +22,7 @@ from werkzeug.utils import secure_filename
 from .auth import login_required, login_as_admin_required, is_admin
 from .data_handler import (
     LP,
+    DuplicateDocumentError,
     infer_study_period_from_date,
     create_meeting,
     fetch_meetings,
@@ -65,7 +66,9 @@ _FALLBACK_GROUPS = [
 
 def _meeting_label(meeting):
     lp_int = int(meeting.study_period.lp)
-    lp_label = "Summer" if lp_int == 5 else f"Study Period {lp_int}"
+    lp_label = (
+        t("meeting.summer") if lp_int == 5 else t("meeting.study_period", lp=lp_int)
+    )
     return f"{meeting.date} - {lp_label}"
 
 
@@ -177,7 +180,7 @@ def doc():
 
     # Fetch documents if a meeting is selected
     documents_by_owner = {}
-    owner_names = {user["id"]: "My Documents"}
+    owner_names = {user["id"]: t("doc.my_documents")}
     if selected_meeting:
         group_ids = [g.get("id") for g in user.get("groups", [])]
         documents_by_owner = fetch_documents_for_meeting(
@@ -223,7 +226,7 @@ def liberation_admin():
                 if request.form.get(checkbox_name):
                     set_liberation_require(group["id"], doc_type.value)
 
-        flash("Liberation requirements updated.", "success")
+        flash(t("flash.liberation_requirements_updated"), "success")
         return redirect(url_for("main.liberation_admin"))
 
     return render_template(
@@ -263,7 +266,7 @@ def download_meeting_documents(meeting_id):
     )
 
     if not documents:
-        flash("No documents have been uploaded for this meeting yet.", "error")
+        flash(t("flash.no_meeting_documents"), "error")
         return redirect(url_for("main.admin"))
 
     # Create zip file
@@ -362,7 +365,7 @@ def create_meeting_page():
     deadline_str = request.form.get("deadline")
 
     if not meeting_date_str or not deadline_str:
-        flash("Meeting date and upload deadline are required.", "error")
+        flash(t("flash.required_fields"), "error")
         return redirect(url_for("main.admin"))
 
     try:
@@ -371,11 +374,11 @@ def create_meeting_page():
         # chosen day
         deadline = datetime.combine(date.fromisoformat(deadline_str), time(23, 59))
     except ValueError:
-        flash("Invalid meeting date or deadline.", "error")
+        flash(t("flash.invalid_date_or_deadline"), "error")
         return redirect(url_for("main.admin"))
 
     if deadline.date() > meeting_date:
-        flash("Deadline must be on or before the meeting date.", "error")
+        flash(t("flash.deadline_after_meeting"), "error")
         return redirect(url_for("main.admin"))
 
     # Year and study period are derived from the date (issues #6/#7)
@@ -385,13 +388,13 @@ def create_meeting_page():
     if sp is None:
         sp = create_study_period(y, lp)
         if sp is None:
-            flash("Failed to create study period.", "error")
+            flash(t("flash.study_period_failed"), "error")
             return redirect(url_for("main.admin"))
 
     meeting = create_meeting(meeting_date, sp, deadline)
     if not meeting:
         # create_meeting returns None only on a duplicate meeting date
-        flash(f"A meeting already exists on {meeting_date}.", "error")
+        flash(t("flash.meeting_exists", date=meeting_date), "error")
         return redirect(url_for("main.admin"))
 
     # Save requirements
@@ -401,7 +404,7 @@ def create_meeting_page():
             if request.form.get(checkbox_name):
                 set_document_require(meeting.id, group["id"], doc_type.value)
 
-    flash("Meeting created successfully.", "success")
+    flash(t("flash.meeting_created"), "success")
     return redirect(url_for("main.admin"))
 
 
@@ -461,24 +464,24 @@ def document_upload():
     )
 
     if not uploaded_file:
-        return _upload_error("No file selected.", meetings, selected_meeting)
+        return _upload_error(t("flash.no_file"), meetings, selected_meeting)
 
     # Meeting is only required for meeting and division documents.
     # Validate that the submitted id refers to a real meeting: a forged or
     # stale id would otherwise crash upload_document further down.
     if document_type_str != "liberation" and not selected_meeting:
-        return _upload_error("Please select a valid meeting.", meetings)
+        return _upload_error(t("flash.invalid_meeting"), meetings)
 
     if not owner_id:
         return _upload_error(
-            "Please select who to upload as.", meetings, selected_meeting
+            t("flash.no_owner"), meetings, selected_meeting
         )
 
     try:
         document_type = DocumentType(document_type_str)
     except ValueError:
         return _upload_error(
-            "Please select a document type.", meetings, selected_meeting
+            t("flash.no_type"), meetings, selected_meeting
         )
 
     # Enforce the upload deadline server-side. Meeting admins may still
@@ -491,7 +494,7 @@ def document_upload():
         and not is_admin()
     ):
         return _upload_error(
-            "The upload deadline for this meeting has passed.",
+            t("flash.deadline_passed"),
             meetings,
             selected_meeting,
         )
@@ -499,7 +502,7 @@ def document_upload():
     # Validate that personal (self) uploads are only meeting documents
     if owner_id == "self" and document_type != DocumentType.MEETING:
         return _upload_error(
-            "You can only upload meeting documents as yourself.",
+            t("flash.self_meeting_only"),
             meetings,
             selected_meeting,
         )
@@ -507,14 +510,14 @@ def document_upload():
     # Validate that personal (self) uploads are only motion or other subtypes
     if owner_id == "self" and document_subtype_str not in ["motion", "other"]:
         return _upload_error(
-            "You can only upload motions or other documents as yourself.",
+            t("flash.self_motion_only"),
             meetings,
             selected_meeting,
         )
 
     if not document_subtype_str:
         return _upload_error(
-            "Please select a document subtype.", meetings, selected_meeting
+            t("flash.no_subtype"), meetings, selected_meeting
         )
 
     # Validate the subtype against the known types - upload_document inserts
@@ -529,7 +532,7 @@ def document_upload():
         document_subtype = subtype_enum(document_subtype_str)
     except ValueError:
         return _upload_error(
-            "Please select a valid document subtype.", meetings, selected_meeting
+            t("flash.invalid_subtype"), meetings, selected_meeting
         )
 
     # Determine the actual owner ID (self or group). A user may only
@@ -542,7 +545,7 @@ def document_upload():
         allowed_group_ids = {grp.get("id") for grp in g.user.get("groups", [])}
         if owner_id not in allowed_group_ids:
             return _upload_error(
-                "You are not a member of that group.", meetings, selected_meeting
+                t("flash.not_group_member"), meetings, selected_meeting
             )
         actual_owner_id = owner_id
         is_group = True
@@ -554,9 +557,7 @@ def document_upload():
     extension = Path(uploaded_file.filename or "").suffix.lower()
     expected_signature = ALLOWED_UPLOAD_TYPES.get(extension)
     if expected_signature is None or not data.startswith(expected_signature):
-        return _upload_error(
-            "Only PDF files are allowed.", meetings, selected_meeting
-        )
+        return _upload_error(t("flash.pdf_only"), meetings, selected_meeting)
     file_name = secure_filename(uploaded_file.filename) or "document.pdf"
 
     try:
@@ -569,11 +570,12 @@ def document_upload():
             document_subtype.value,
             is_group,
         )
-    except ValueError as e:
-        # DuplicateDocumentError and "Meeting does not exist." from
-        # upload_document both carry a user-appropriate message
-        return _upload_error(str(e), meetings, selected_meeting)
-    flash("Document uploaded successfully.", "success")
+    except DuplicateDocumentError:
+        return _upload_error(t("flash.duplicate_file"), meetings, selected_meeting)
+    except ValueError:
+        # "Meeting does not exist." from upload_document
+        return _upload_error(t("flash.invalid_meeting"), meetings, selected_meeting)
+    flash(t("flash.upload_success"), "success")
     return redirect(url_for("main.doc"))
 
 
@@ -590,11 +592,7 @@ def download_document(document_id):
 
     if not Path(doc["file_path"]).is_file():
         logger.error("File missing on disk for document %s", document_id)
-        flash(
-            "The file for this document is missing on the server. "
-            "Please contact the meeting admins.",
-            "error",
-        )
+        flash(t("flash.file_missing"), "error")
         return redirect(url_for("main.doc"))
 
     return send_file(doc["file_path"], as_attachment=True, download_name=doc["name"])
@@ -609,12 +607,9 @@ def delete_document_view(document_id):
 
     success = delete_document(document_id, all_owner_ids)
     if success:
-        flash("Document deleted successfully.", "success")
+        flash(t("flash.document_deleted"), "success")
     else:
-        flash(
-            "Document not found, or you do not have permission to delete it.",
-            "error",
-        )
+        flash(t("flash.document_delete_denied"), "error")
 
     return redirect(url_for("main.doc"))
 
@@ -624,9 +619,9 @@ def delete_document_view(document_id):
 def delete_meeting(meeting_id):
     success = delete_meeting_and_documents(meeting_id)
     if success:
-        flash("Meeting and associated documents deleted successfully.", "success")
+        flash(t("flash.meeting_deleted"), "success")
     else:
-        flash("Failed to delete meeting.", "error")
+        flash(t("flash.meeting_delete_failed"), "error")
 
     return redirect(url_for("main.admin"))
 
@@ -637,7 +632,7 @@ def manage_meeting(meeting_id):
     meetings = fetch_meetings()
     meeting = next((m for m in meetings if m.id == meeting_id), None)
     if not meeting:
-        flash("Meeting not found.", "error")
+        flash(t("flash.meeting_not_found"), "error")
         return redirect(url_for("main.admin"))
 
     form_data = _get_meeting_form_data()
@@ -652,13 +647,13 @@ def manage_meeting(meeting_id):
                     date.fromisoformat(deadline_str), time(23, 59)
                 )
             except ValueError:
-                flash("Invalid deadline.", "error")
+                flash(t("flash.invalid_deadline"), "error")
                 return redirect(url_for("main.manage_meeting", meeting_id=meeting_id))
             if deadline.date() > meeting.date:
-                flash("Deadline must be on or before the meeting date.", "error")
+                flash(t("flash.deadline_after_meeting"), "error")
                 return redirect(url_for("main.manage_meeting", meeting_id=meeting_id))
         if not update_meeting_deadline(meeting_id, deadline):
-            flash("Failed to update deadline.", "error")
+            flash(t("flash.deadline_update_failed"), "error")
             return redirect(url_for("main.admin"))
 
         # Clear all requirements for this meeting first
@@ -674,7 +669,7 @@ def manage_meeting(meeting_id):
                 if request.form.get(checkbox_name):
                     set_document_require(meeting_id, group["id"], doc_type.value)
 
-        flash("Meeting updated successfully.", "success")
+        flash(t("flash.meeting_updated"), "success")
         return redirect(url_for("main.admin"))
 
     # GET request - show form

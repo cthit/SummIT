@@ -1,22 +1,22 @@
 {% extends "base.html" %} {% block content %}
 <h1>
-  Welcome, {{ user.name if user and user.name else (user.email if user and
-  user.email else 'digIT User') }}!
+  {{ t('profile.welcome', name=user.name if user and user.name else (user.email
+  if user and user.email else 'digIT User')) }}
 </h1>
 
 {% if user %}
 <div>
-  <h2>Profile Information</h2>
+  <h2>{{ t('profile.info') }}</h2>
 
   <!-- Basic user info -->
   {% if user.sub %}
-  <p><strong>User ID:</strong> {{ user.sub }}</p>
+  <p><strong>{{ t('profile.user_id') }}:</strong> {{ user.sub }}</p>
   {% endif %} {% if user.name %}
-  <p><strong>Name:</strong> {{ user.name }}</p>
+  <p><strong>{{ t('profile.name') }}:</strong> {{ user.name }}</p>
   {% endif %} {% if user.email %}
-  <p><strong>Email:</strong> {{ user.email }}</p>
+  <p><strong>{{ t('profile.email') }}:</strong> {{ user.email }}</p>
   {% endif %} {% if user.nick %}
-  <p><strong>Nickname:</strong> {{ user.nick }}</p>
+  <p><strong>{{ t('profile.nickname') }}:</strong> {{ user.nick }}</p>
   {% endif %} {% if user.cid %}
   <p><strong>CID:</strong> {{ user.cid }}</p>
   {% endif %}
@@ -24,7 +24,7 @@
   <!-- Active Groups -->
   {% if user.groups %}
   <p>
-    <strong>Groups:</strong>
+    <strong>{{ t('profile.groups') }}:</strong>
     {% for group in user.groups %} {{ group.prettyName or group.name }}{% if
     group.post %} ({{ group.post }}){% endif %}{% if not loop.last %}, {% endif
     %} {% endfor %}
@@ -53,12 +53,12 @@
 
   <!-- Logout button -->
   <div>
-    <a href="{{ url_for('auth.logout') }}">Logout</a>
+    <a href="{{ url_for('auth.logout') }}">{{ t('nav.logout') }}</a>
   </div>
 </div>
 {% else %}
 <div>
-  <p>You are not logged in.</p>
-  <a href="{{ url_for('auth.login') }}">Login</a>
+  <p>{{ t('profile.not_logged_in') }}</p>
+  <a href="{{ url_for('auth.login') }}">{{ t('nav.login') }}</a>
 </div>
 {% endif %} {% endblock %}

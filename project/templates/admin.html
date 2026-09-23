@@ -1,28 +1,28 @@
 {% extends "base.html" %} {% block content %}
-<h1>Meeting Admin</h1>
+<h1>{{ t('admin.title') }}</h1>
 
 <div class="center-content">
-  <h2 class="inline-display">Select meeting:</h2>
+  <h2 class="inline-display">{{ t('meeting.select') }}</h2>
   <select id="meetingSelect" onchange="loadMeetingRequirements()">
-    <option value="">Select a meeting...</option>
+    <option value="">{{ t('meeting.select_placeholder') }}</option>
     {% for meeting in meetings %}
     <option value="{{ meeting.id }}">
       {{ meeting.date }}
-      {% if meeting.study_period.lp != 5 %}Study Period {{ meeting.study_period.lp }}{% else %}Summer{% endif %}
+      {% if meeting.study_period.lp != 5 %}{{ t('meeting.study_period', lp=meeting.study_period.lp|int) }}{% else %}{{ t('meeting.summer') }}{% endif %}
     </option>
     {% endfor %}
   </select>
-  <a href="{{ url_for('main.create_meeting_page') }}">Create Meeting</a>
+  <a href="{{ url_for('main.create_meeting_page') }}">{{ t('admin.create_meeting') }}</a>
 </div>
 
 <div id="requirementsContainer" class="hidden">
-  <h2>Document Requirements</h2>
+  <h2>{{ t('admin.requirements') }}</h2>
   <div id="requirementsTable"></div>
   <div class="center-content">
-    <button onclick="downloadMeetingDocuments()">Download Meeting Documents</button>
-    <button onclick="editMeeting()">Edit Meeting</button>
-    <button onclick="deleteMeeting()">Delete Meeting</button>
-    <button onclick="send_mail()">Send Anouncment</button>
+    <button onclick="downloadMeetingDocuments()">{{ t('admin.download_documents') }}</button>
+    <button onclick="editMeeting()">{{ t('admin.edit_meeting') }}</button>
+    <button onclick="deleteMeeting()">{{ t('admin.delete_meeting') }}</button>
+    <button onclick="send_mail()">{{ t('admin.send_announcement') }}</button>
   </div>
 </div>
 
@@ -45,7 +45,7 @@ function loadMeetingRequirements() {
   fetch(`/admin/meeting-requirements/${meetingId}`)
     .then(r => r.json())
     .then(data => {
-      let html = '<table class="requirements-table"><thead><tr><th>Group</th>';
+      let html = '<table class="requirements-table"><thead><tr><th>{{ t('admin.group') }}</th>';
       
       data.doc_types.forEach(dt => {
         html += `<th>${dt[1]}</th>`;
@@ -81,13 +81,13 @@ function downloadMeetingDocuments() {
 
 
 function deleteMeeting() {
-  if (currentMeetingId && confirm('Delete this meeting and all associated documents?')) {
+  if (currentMeetingId && confirm('{{ t('admin.confirm_delete') }}')) {
     location.href = `/admin/delete-meeting/${currentMeetingId}`;
   }
 }
 
 function send_mail() {
-  if (currentMeetingId && confirm('Send announcement mail to all groups with requirements?')) {
+  if (currentMeetingId && confirm('{{ t('admin.confirm_announcement') }}')) {
     // Reload afterwards so the flash message from the route is shown
     fetch(`/admin/mail/send/${currentMeetingId}`, { method: 'POST' })
       .then(() => location.reload());

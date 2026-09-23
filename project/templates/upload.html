@@ -1,16 +1,16 @@
 {% extends "base.html" %} {% block content %}
 
-<h1>Upload File</h1>
+<h1>{{ t('upload.title') }}</h1>
 
 <div id="meetingSection">
-  <h2 class="inline-display">Choose meeting:</h2>
+  <h2 class="inline-display">{{ t('meeting.select') }}</h2>
   <form method="get" class="inline-display">
     <select
       id="meetingSelect"
       name="meeting_id"
       onchange="if (this.value) this.form.submit();"
     >
-      <option value="">Select a meeting...</option>
+      <option value="">{{ t('meeting.select_placeholder') }}</option>
       {% for meeting in meetings %}
       <option
         value="{{ meeting.id }}"
@@ -18,9 +18,9 @@
       >
         {{ meeting.date }}
         {% if meeting.study_period.lp|int != 5 %}
-          Study Period {{ meeting.study_period.lp|int }}
+          {{ t('meeting.study_period', lp=meeting.study_period.lp|int) }}
         {% else %}
-          Summer
+          {{ t('meeting.summer') }}
         {% endif %}
       </option>
       {% endfor %}
@@ -29,12 +29,10 @@
 </div>
 
 {% if selected_meeting and selected_meeting.deadline %}
-<p><strong>Upload deadline:</strong> {{ selected_meeting.deadline.strftime('%Y-%m-%d %H:%M') }}</p>
+<p><strong>{{ t('doc.deadline') }}</strong> {{ selected_meeting.deadline.strftime('%Y-%m-%d %H:%M') }}</p>
 {% if deadline_passed %}
 <div class="flash flash-warning">
-  The upload deadline for this meeting has passed. Only meeting admins can
-  upload meeting or division documents now (liberation documents are
-  unaffected).
+  {{ t('upload.deadline_banner') }}
 </div>
 {% endif %}
 {% endif %}
@@ -45,34 +43,34 @@
     <input type="hidden" name="meeting_id" value="{{ selected_meeting.id }}">
     {% endif %}
     <div>
-      <label>Upload as:</label><br>
+      <label>{{ t('upload.as') }}</label><br>
       <select name="owner_id" required onchange="updateDocumentTypeOptions()">
-        <option value="">Select owner...</option>
-        <option value="self">Myself</option>
+        <option value="">{{ t('upload.select_owner') }}</option>
+        <option value="self">{{ t('upload.myself') }}</option>
         {% for group in user.groups %}
         <option value="{{ group.id }}">{{ group.prettyName }}</option>
         {% endfor %}
       </select>
     </div>
     <div>
-      <label>Document type:</label><br>
-      <label><input type="radio" name="document_type" value="meeting" required onchange="toggleDocumentSubtype()"> Meeting Document</label><br>
-      <div id="division_option"><label><input type="radio" name="document_type" value="division" required onchange="toggleDocumentSubtype()"> Division Document</label><br></div>
-      <div id="liberation_option"><label><input type="radio" name="document_type" value="liberation" required onchange="toggleDocumentSubtype()"> Liberation Document</label></div>
+      <label>{{ t('upload.document_type') }}</label><br>
+      <label><input type="radio" name="document_type" value="meeting" required onchange="toggleDocumentSubtype()"> {{ t('upload.meeting_document') }}</label><br>
+      <div id="division_option"><label><input type="radio" name="document_type" value="division" required onchange="toggleDocumentSubtype()"> {{ t('upload.division_document') }}</label><br></div>
+      <div id="liberation_option"><label><input type="radio" name="document_type" value="liberation" required onchange="toggleDocumentSubtype()"> {{ t('upload.liberation_document') }}</label></div>
     </div>
     <div id="meeting_subtype" class="hidden">
-      <label>Meeting document type:</label><br>
+      <label>{{ t('upload.meeting_subtype') }}</label><br>
       <select name="meeting_document_subtype">
-        <option value="">Select type...</option>
+        <option value="">{{ t('upload.select_type') }}</option>
         {% for doc_type in meeting_doc_types %}
         <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
         {% endfor %}
       </select>
     </div>
     <div id="division_subtype" class="hidden">
-      <label>Division document type:</label><br>
+      <label>{{ t('upload.division_subtype') }}</label><br>
       <select name="division_document_subtype" onchange="updateDivisionWarning()">
-        <option value="">Select type...</option>
+        <option value="">{{ t('upload.select_type') }}</option>
         {% for doc_type in division_doc_types %}
         <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
         {% endfor %}
@@ -80,18 +78,18 @@
       <div id="division_requirement_warning" class="hidden"></div>
     </div>
     <div id="liberation_subtype" class="hidden">
-      <label>Liberation document type:</label><br>
+      <label>{{ t('upload.liberation_subtype') }}</label><br>
       <select name="liberation_document_subtype">
-        <option value="">Select type...</option>
+        <option value="">{{ t('upload.select_type') }}</option>
         {% for doc_type in liberation_doc_types %}
         <option value="{{ doc_type.value }}">{{ doc_type.name.replace('_', ' ').title() }}</option>
         {% endfor %}
       </select>
     </div>
-    <label for="file">Choose file (PDF):</label>
+    <label for="file">{{ t('upload.choose_file') }}</label>
     <input type="file" name="file" id="file" accept=".pdf,application/pdf" required>
     <br><br>
-    <input type="submit" value="Upload">
+    <input type="submit" value="{{ t('upload.submit') }}">
 </form>
 
 <script>
@@ -110,7 +108,7 @@ function annotateDivisionOptions() {
   options.forEach(option => {
     if (!option.dataset.label) option.dataset.label = option.textContent.trim();
     const isRequired = required && required.includes(option.value);
-    option.textContent = option.dataset.label + (isRequired ? ' (required)' : '');
+    option.textContent = option.dataset.label + (isRequired ? '{{ t('upload.required_suffix') }}' : '');
   });
   updateDivisionWarning();
 }
@@ -123,7 +121,7 @@ function updateDivisionWarning() {
   const show = divisionRadio.checked && required !== null && select.value
     && !required.includes(select.value);
   if (show) {
-    warning.textContent = 'This document type is not required from this group for this meeting - upload anyway if intentional.';
+    warning.textContent = '{{ t('upload.not_required_warning') }}';
     warning.className = 'flash flash-warning';
   } else {
     warning.textContent = '';
