@@ -1,6 +1,6 @@
 from flask import (
     Blueprint,
-    render_template,
+    flash,
     redirect,
     url_for,
 )
@@ -21,6 +21,9 @@ mail = Blueprint("mail", __name__)
 def send_mail_route(meeting_id):
     doc_req = get_document_requires(meeting_id)  # databased call B)
     meeting_obj = fetch_meeting(meeting_id)
+    if meeting_obj is None:
+        flash("Meeting not found.", "error")
+        return redirect(url_for("main.admin"))
 
     dr = {
         gs.get_super_group(gid): v for gid, v in doc_req.items()
@@ -30,11 +33,14 @@ def send_mail_route(meeting_id):
     lp = meeting_obj.study_period.lp
     year = meeting_obj.study_period.year
 
+    deadline = meeting_obj.deadline
     for group, requirements in dr.items():
         vars = {
             "group_name": group.pretty_name,
             "task_list": requirements,
             "meeting_date": date,
+            "deadline_date": deadline.strftime("%Y-%m-%d") if deadline else "TBD",
+            "deadline_time": deadline.strftime("%H:%M") if deadline else "",
         }
 
         send_mail_config(

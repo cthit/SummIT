@@ -29,6 +29,11 @@
   <div>
     <strong>Selected Meeting: </strong>{{ label }}
   </div>
+  {% if selected_meeting.deadline %}
+  <div>
+    <strong>Upload deadline: </strong>{{ selected_meeting.deadline.strftime('%Y-%m-%d %H:%M') }}
+  </div>
+  {% endif %}
   
   {% if documents_by_owner %}
     {% for owner_id, docs in documents_by_owner.items() %}
