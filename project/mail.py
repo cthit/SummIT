@@ -113,7 +113,7 @@ def send_liberation_mail_route():
     mail_type = f"duty_retirement_{date.today().year}"
     sent = 0
     for entry in get_missing_liberation_documents():
-        if has_sent_mail(mail_type, None, entry["group_id"]):
+        if has_sent_mail(mail_type, None, entry["group_name"]):
             continue
         try:
             send_mail_config(
@@ -134,7 +134,7 @@ def send_liberation_mail_route():
                 "error",
             )
             return redirect(url_for("main.liberation_admin"))
-        record_sent_mail(mail_type, None, entry["group_id"])
+        record_sent_mail(mail_type, None, entry["group_name"])
         sent += 1
 
     if sent:

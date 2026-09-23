@@ -212,9 +212,10 @@ def admin():
 def liberation_admin():
     groups = _get_meeting_form_data()["groups"]
     missing_by_group = {
-        entry["group_id"]: entry["missing"]
+        entry["group_name"]: entry["missing"]
         for entry in get_missing_liberation_documents()
     }
+    current_year = date.today().year
     return render_template(
         "liberation_admin.html",
         groups=groups,
@@ -222,59 +223,34 @@ def liberation_admin():
         requirements=get_liberation_requires(),
         missing_by_group=missing_by_group,
         super_group_names={group["id"]: group["pretty_name"] for group in groups},
+        year_suggestions=list(range(current_year, current_year - 5, -1)),
     )
-
-
-@main.route("/admin/liberation/instances/<super_group_id>")
-@login_as_admin_required
-def liberation_instances_json(super_group_id):
-    """The group instances (digit24, digit25, ...) of one super-group, for
-    the add-requirement picker."""
-    instances = []
-    try:
-        instances = [
-            {"id": grp.id, "name": grp.name, "pretty_name": grp.pretty_name}
-            for grp in gs.get_all_groups()
-            if grp.super_group.id == super_group_id
-        ]
-    except Exception:
-        logger.exception("Could not fetch group instances from Gamma")
-
-    # Dev fallback: only for the fake dev groups, never for real ids - a
-    # Gamma outage in production must not offer made-up groups
-    if not instances and super_group_id.startswith("dev-group-id-"):
-        sg = next(
-            (g for g in _get_meeting_form_data()["groups"] if g["id"] == super_group_id),
-            None,
-        )
-        if sg:
-            yy = date.today().year % 100
-            instances = [
-                {
-                    "id": f"dev-instance-{sg['name']}{yy}",
-                    "name": f"{sg['name']}{yy}",
-                    "pretty_name": f"{sg['pretty_name']} {yy}",
-                }
-            ]
-    return jsonify(instances)
 
 
 @main.route("/admin/liberation/add", methods=["POST"])
 @login_as_admin_required
 def liberation_add():
+    """Add a liberation requirement for <committee><year>, e.g. digit25.
+
+    The year is free text (Gamma's group-instance data is unreliable, so
+    the sitting group is named by hand); a four-digit year is shortened to
+    its last two digits to match the naming convention.
+    """
     super_group_id = request.form.get("super_group_id")
-    group_id = request.form.get("group_id")
-    group_name = request.form.get("group_name")
-    group_pretty_name = request.form.get("group_pretty_name") or group_name
+    year_str = (request.form.get("year") or "").strip()
     doc_type_str = request.form.get("doc_type", "all")
 
-    valid_super_ids = {g["id"] for g in _get_meeting_form_data()["groups"]}
-    if not super_group_id or super_group_id not in valid_super_ids:
+    super_group = next(
+        (g for g in _get_meeting_form_data()["groups"] if g["id"] == super_group_id),
+        None,
+    )
+    if super_group is None or not year_str or len(year_str) > 20:
         flash(t("flash.liberation_invalid"), "error")
         return redirect(url_for("main.liberation_admin"))
-    if not group_id or not group_name:
-        flash(t("flash.liberation_invalid"), "error")
-        return redirect(url_for("main.liberation_admin"))
+
+    suffix = year_str[-2:] if year_str.isdigit() and len(year_str) == 4 else year_str
+    group_name = f"{super_group['name']}{suffix}"
+    group_pretty_name = f"{super_group['pretty_name']} {suffix}"
 
     if doc_type_str == "all":
         doc_types = [dt.value for dt in LiberationDocumentTypes]
@@ -287,16 +263,17 @@ def liberation_add():
 
     for doc_type in doc_types:
         set_liberation_require(
-            super_group_id, group_id, group_name, group_pretty_name, doc_type
+            super_group_id, group_name, group_pretty_name, doc_type
         )
     flash(t("flash.liberation_requirement_added"), "success")
     return redirect(url_for("main.liberation_admin"))
 
 
-@main.route("/admin/liberation/remove/<group_id>", methods=["POST"])
+@main.route("/admin/liberation/remove", methods=["POST"])
 @login_as_admin_required
-def liberation_remove(group_id):
-    if remove_liberation_require(group_id):
+def liberation_remove():
+    group_name = request.form.get("group_name", "")
+    if group_name and remove_liberation_require(group_name):
         flash(t("flash.liberation_requirement_removed"), "success")
     else:
         flash(t("flash.liberation_invalid"), "error")

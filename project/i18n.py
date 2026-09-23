@@ -85,18 +85,15 @@ TRANSLATIONS = {
         "sv": "Krävda ansvarsfrihetsdokument",
     },
     "liberation.grid_hint": {
-        "en": "Choose a committee, then the specific group in it that must submit liberation documents.",
-        "sv": "Välj en kommitté och sedan den specifika grupp inom den som ska lämna in ansvarsfrihetsdokument.",
+        "en": "Choose a committee and the year of the sitting group that must submit liberation documents (e.g. digIT + 25 = digit25).",
+        "sv": "Välj en kommitté och året för den sittande grupp som ska lämna in ansvarsfrihetsdokument (t.ex. digIT + 25 = digit25).",
     },
     "liberation.committee": {"en": "Committee", "sv": "Kommitté"},
     "liberation.select_committee": {
         "en": "Select committee...",
         "sv": "Välj kommitté...",
     },
-    "liberation.select_committee_first": {
-        "en": "Select a committee first",
-        "sv": "Välj kommitté först",
-    },
+    "liberation.year": {"en": "Year", "sv": "År"},
     "liberation.all_types": {"en": "All document types", "sv": "Alla dokumenttyper"},
     "liberation.add_requirement": {"en": "Add Requirement", "sv": "Lägg till krav"},
     "liberation.remove": {"en": "Remove", "sv": "Ta bort"},

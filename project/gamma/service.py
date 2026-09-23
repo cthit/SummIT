@@ -1,7 +1,6 @@
 import os
 from urllib3 import HTTPSConnectionPool
 import json
-import requests
 from .types import (
     GammaGroup,
     GammaSuperGroup,
@@ -9,7 +8,6 @@ from .types import (
     GammaSuperGroupEntry,
 )
 from .parse import (
-    parse_group,
     parse_user_info,
     parse_supergroup_list_item,
 )
@@ -32,14 +30,6 @@ def _gamma_auth_header() -> str:
     else:
         return header
 
-
-def _client_auth_header() -> str:
-    """The client API uses a different key than the info API (same header
-    auth.py uses for /api/client/v1/groups/for)."""
-    header = os.getenv("AUTH_HEADER", "")
-    if not header:
-        raise Exception("Gamma client auth header (AUTH_HEADER) empty")
-    return header
 
 
 class GammaService:
@@ -123,17 +113,6 @@ class GammaService:
         for item in data:
             entries.extend(parse_supergroup_list_item(item).super_groups)
         return tuple(entries)
-
-    @staticmethod
-    def get_all_groups() -> tuple[GammaGroup, ...]:
-        """All active group instances (e.g. digit25) from the client API."""
-        response = requests.get(
-            f"{gamma_url()}/api/client/v1/groups",
-            headers={"Authorization": _client_auth_header()},
-            timeout=30,
-        )
-        response.raise_for_status()
-        return tuple(parse_group(g) for g in response.json())
 
     @staticmethod
     def get_super_group(super_group_id: str) -> GammaSuperGroup | None:

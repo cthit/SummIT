@@ -22,15 +22,16 @@
       <td>{{ super_group_names.get(req.super_group_id, req.super_group_id) }}</td>
       <td>{{ req.doc_types | join(', ') }}</td>
       <td>
-        {% if req.group_id in missing_by_group %}
-          {{ missing_by_group[req.group_id] | join(', ') }}
+        {% if req.group_name in missing_by_group %}
+          {{ missing_by_group[req.group_name] | join(', ') }}
         {% else %}
           {{ t('liberation.all_uploaded') }}
         {% endif %}
       </td>
       <td>
         <form method="post" class="inline-display"
-              action="{{ url_for('main.liberation_remove', group_id=req.group_id) }}">
+              action="{{ url_for('main.liberation_remove') }}">
+          <input type="hidden" name="group_name" value="{{ req.group_name }}">
           <button type="submit">{{ t('liberation.remove') }}</button>
         </form>
       </td>
@@ -46,7 +47,7 @@
 <form method="post" action="{{ url_for('main.liberation_add') }}">
   <div>
     <label for="superGroupSelect">{{ t('liberation.committee') }}:</label><br>
-    <select id="superGroupSelect" name="super_group_id" required onchange="loadInstances()">
+    <select id="superGroupSelect" name="super_group_id" required>
       <option value="">{{ t('liberation.select_committee') }}</option>
       {% for group in groups %}
       <option value="{{ group.id }}">{{ group.pretty_name }}</option>
@@ -54,10 +55,16 @@
     </select>
   </div>
   <div>
-    <label for="instanceSelect">{{ t('admin.group') }}:</label><br>
-    <select id="instanceSelect" name="group_id" required disabled>
-      <option value="">{{ t('liberation.select_committee_first') }}</option>
-    </select>
+    <label for="yearInput">{{ t('liberation.year') }}:</label><br>
+    {# Free text on purpose - Gamma's group-instance data is unreliable, so
+       the sitting group is named committee + year by hand #}
+    <input id="yearInput" name="year" list="yearSuggestions" required
+           autocomplete="off" placeholder="{{ year_suggestions[0] }}">
+    <datalist id="yearSuggestions">
+      {% for year in year_suggestions %}
+      <option value="{{ year }}"></option>
+      {% endfor %}
+    </datalist>
   </div>
   <div>
     <label for="docTypeSelect">{{ t('upload.document_type') }}</label><br>
@@ -68,8 +75,6 @@
       {% endfor %}
     </select>
   </div>
-  <input type="hidden" name="group_name" id="groupNameField">
-  <input type="hidden" name="group_pretty_name" id="groupPrettyField">
   <div class="center-content">
     <button type="submit">{{ t('liberation.add_requirement') }}</button>
   </div>
@@ -80,35 +85,6 @@
 </div>
 
 <script>
-function loadInstances() {
-  const superId = document.getElementById('superGroupSelect').value;
-  const instanceSelect = document.getElementById('instanceSelect');
-  instanceSelect.innerHTML = '<option value="">{{ t('liberation.select_committee_first') }}</option>';
-  instanceSelect.disabled = true;
-  document.getElementById('groupNameField').value = '';
-  document.getElementById('groupPrettyField').value = '';
-  if (!superId) return;
-  fetch(`/admin/liberation/instances/${encodeURIComponent(superId)}`)
-    .then(r => r.json())
-    .then(instances => {
-      for (const inst of instances) {
-        const opt = document.createElement('option');
-        opt.value = inst.id;
-        opt.textContent = inst.pretty_name || inst.name;
-        opt.dataset.name = inst.name;
-        opt.dataset.pretty = inst.pretty_name || inst.name;
-        instanceSelect.appendChild(opt);
-      }
-      instanceSelect.disabled = false;
-    });
-}
-
-document.getElementById('instanceSelect').addEventListener('change', function () {
-  const opt = this.selectedOptions[0];
-  document.getElementById('groupNameField').value = opt ? (opt.dataset.name || '') : '';
-  document.getElementById('groupPrettyField').value = opt ? (opt.dataset.pretty || '') : '';
-});
-
 function sendLiberationMail() {
   if (confirm('{{ t('liberation.confirm_send') }}')) {
     fetch('{{ url_for("mail.send_liberation_mail_route") }}', { method: 'POST' })

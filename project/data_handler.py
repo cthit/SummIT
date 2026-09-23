@@ -736,17 +736,17 @@ def get_missing_document_requires(meeting_id: int) -> dict[str, list[str]]:
 
 
 def get_liberation_requires() -> list[dict]:
-    """Liberation requirements, one entry per required group instance:
-    [{super_group_id, group_id, group_name, group_pretty_name, doc_types}].
+    """Liberation requirements, one entry per required yearly group:
+    [{super_group_id, group_name, group_pretty_name, doc_types}].
 
-    group_id/group_name identify the responsible yearly instance (digit25);
+    group_name identifies the responsible sitting group (digit25);
     super_group_id is the owner id its uploads are stored under.
     """
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT lr.gamma_owner_id, lr.gamma_group_id, lr.group_name,
+            SELECT lr.gamma_owner_id, lr.group_name,
                    lr.group_pretty_name, lt.type_name
             FROM LiberationRequire lr
             JOIN LiberationDocumentTypes lt ON lr.document_type_id = lt.type_id
@@ -756,12 +756,11 @@ def get_liberation_requires() -> list[dict]:
         rows = cur.fetchall()
 
     by_group: dict[str, dict] = {}
-    for super_id, group_id, group_name, pretty_name, doc_type in rows:
+    for super_id, group_name, pretty_name, doc_type in rows:
         entry = by_group.setdefault(
-            group_id,
+            group_name,
             {
                 "super_group_id": super_id,
-                "group_id": group_id,
                 "group_name": group_name,
                 "group_pretty_name": pretty_name,
                 "doc_types": [],
@@ -773,7 +772,6 @@ def get_liberation_requires() -> list[dict]:
 
 def set_liberation_require(
     super_group_id: str,
-    group_id: str,
     group_name: str,
     group_pretty_name: str,
     doc_type_name: str,
@@ -809,11 +807,11 @@ def set_liberation_require(
             cur.execute(
                 """
                 INSERT INTO LiberationRequire
-                    (gamma_owner_id, gamma_group_id, group_name, group_pretty_name, document_type_id)
-                VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (gamma_group_id, document_type_id) DO NOTHING;
+                    (gamma_owner_id, group_name, group_pretty_name, document_type_id)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (group_name, document_type_id) DO NOTHING;
                 """,
-                (super_group_id, group_id, group_name, group_pretty_name, row[0]),
+                (super_group_id, group_name, group_pretty_name, row[0]),
             )
         conn.commit()
         return True
@@ -823,14 +821,14 @@ def set_liberation_require(
         raise
 
 
-def remove_liberation_require(group_id: str) -> bool:
-    """Remove all liberation requirements for one group instance."""
+def remove_liberation_require(group_name: str) -> bool:
+    """Remove all liberation requirements for one yearly group."""
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM LiberationRequire WHERE gamma_group_id = %s;",
-                (group_id,),
+                "DELETE FROM LiberationRequire WHERE group_name = %s;",
+                (group_name,),
             )
             removed = cur.rowcount > 0
         conn.commit()
@@ -842,8 +840,8 @@ def remove_liberation_require(group_id: str) -> bool:
 
 
 def get_missing_liberation_documents() -> list[dict]:
-    """Requirements with what is still missing, one entry per group instance:
-    [{super_group_id, group_id, group_name, group_pretty_name, missing}].
+    """Requirements with what is still missing, one entry per yearly group:
+    [{super_group_id, group_name, group_pretty_name, missing}].
 
     Uploads are matched by the super-group owner id, since that is how
     documents are stored.

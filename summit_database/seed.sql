@@ -75,18 +75,18 @@ CREATE TABLE IF NOT EXISTS DocumentRequire (
     PRIMARY KEY (document_type_id, meeting_id, gamma_owner_id)
 );
 
--- Which liberation document types each SPECIFIC group (yearly instance,
--- e.g. digit25) must submit, set by liberation admins. gamma_owner_id is
--- the super-group that owns the uploaded documents; gamma_group_id and the
--- name columns identify the responsible instance, which also receives the
--- reminder mail (<group_name>@chalmers.it).
+-- Which liberation document types each specific yearly group (digit25,
+-- prit24, ...) must submit, set by liberation admins. gamma_owner_id is the
+-- super-group that owns the uploaded documents; group_name identifies the
+-- sitting group, built as committee name + year in the admin UI since
+-- Gamma's instance data is unreliable. The reminder mail goes to
+-- <group_name>@chalmers.it.
 CREATE TABLE IF NOT EXISTS LiberationRequire (
     gamma_owner_id TEXT NOT NULL REFERENCES DocumentOwners(gamma_owner_id),
-    gamma_group_id TEXT NOT NULL,
     group_name TEXT NOT NULL,
     group_pretty_name TEXT NOT NULL,
     document_type_id INTEGER REFERENCES LiberationDocumentTypes(type_id),
-    PRIMARY KEY (gamma_group_id, document_type_id)
+    PRIMARY KEY (group_name, document_type_id)
 );
 
 -- Records which notification mails have been sent, so scheduler restarts
