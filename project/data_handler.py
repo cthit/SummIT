@@ -1,6 +1,7 @@
 from project.database import get_db
 import datetime
 import logging
+import psycopg2
 from enum import IntEnum, StrEnum
 from dataclasses import dataclass
 from pathlib import Path
@@ -134,10 +135,14 @@ def create_meeting(
             deadline=meeting_data[2],
             study_period=study_period,
         )
-    except Exception as e:
-        print(e)
+    except psycopg2.errors.UniqueViolation:
+        # meeting_date is UNIQUE - the one expected failure
         conn.rollback()
         return None
+    except Exception:
+        logger.exception("create_meeting failed")
+        conn.rollback()
+        raise
 
 
 def _meeting_from_row(row: tuple) -> Meeting:
@@ -192,10 +197,10 @@ def update_meeting_deadline(
             )
         conn.commit()
         return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("update_meeting_deadline(%s) failed", meeting_id)
         conn.rollback()
-        return False
+        raise
 
 
 def lookup_study_period(year: int, lp: LP) -> StudyPeriod | None:
@@ -237,10 +242,10 @@ def create_study_period(year: int, lp: LP) -> StudyPeriod | None:
 
         # If INSERT did nothing due to conflict, fetch existing
         return lookup_study_period(year, lp)
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("create_study_period failed")
         conn.rollback()
-        return None
+        raise
 
 
 def upload_document(
@@ -305,7 +310,10 @@ def upload_document(
                     "SELECT study_period_id FROM Meetings WHERE meeting_id = %s;",
                     (meeting_id,),
                 )
-                study_period_id = cur.fetchone()[0]
+                row = cur.fetchone()
+                if row is None:
+                    raise ValueError("Meeting does not exist.")
+                study_period_id = row[0]
                 # Use provided subtype
                 cur.execute(
                     """
@@ -358,7 +366,7 @@ def upload_document(
         with file_path.open("wb") as f:
             f.write(the_file)
         conn.commit()
-    except:
+    except Exception:
         conn.rollback()
         raise
     return document
@@ -394,7 +402,7 @@ def create_document_owner(document_owner: DocumentOwner, is_group: bool = False)
                     """,
                     (document_owner._id,),
                 )
-    except:
+    except Exception:
         conn.rollback()
         raise
 
@@ -590,16 +598,17 @@ def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
                 (document_id, allowed_owner_ids),
             )
 
-            # Delete physical file
-            if file_path.is_file():
-                file_path.unlink()
-
         conn.commit()
-        return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("delete_document(%s) failed", document_id)
         conn.rollback()
-        return False
+        raise
+
+    # Remove the file only after the delete is committed - a failed commit
+    # must not leave a Documents row pointing at a deleted file.
+    if file_path.is_file():
+        file_path.unlink()
+    return True
 
 
 def delete_meeting_and_documents(meeting_id: int) -> bool:
@@ -621,22 +630,18 @@ def delete_meeting_and_documents(meeting_id: int) -> bool:
             division_doc_rows = cur.fetchall()
 
             # Delete meeting documents
-            for doc_id, file_path in meeting_doc_rows:
+            for doc_id, _ in meeting_doc_rows:
                 cur.execute(
                     "DELETE FROM MeetingDocuments WHERE document_id = %s;", (doc_id,)
                 )
                 cur.execute("DELETE FROM Documents WHERE document_id = %s;", (doc_id,))
-                if file_path and Path(file_path).is_file():
-                    Path(file_path).unlink()
 
             # Delete division documents
-            for doc_id, file_path in division_doc_rows:
+            for doc_id, _ in division_doc_rows:
                 cur.execute(
                     "DELETE FROM DivisionDocuments WHERE document_id = %s;", (doc_id,)
                 )
                 cur.execute("DELETE FROM Documents WHERE document_id = %s;", (doc_id,))
-                if file_path and Path(file_path).is_file():
-                    Path(file_path).unlink()
 
             # Delete document requires
             cur.execute(
@@ -653,11 +658,17 @@ def delete_meeting_and_documents(meeting_id: int) -> bool:
             cur.execute("DELETE FROM Meetings WHERE meeting_id = %s;", (meeting_id,))
 
         conn.commit()
-        return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("delete_meeting_and_documents(%s) failed", meeting_id)
         conn.rollback()
-        return False
+        raise
+
+    # Remove files only after the DB state is committed - a failed commit
+    # must not orphan rows pointing at deleted files.
+    for _, file_path in meeting_doc_rows + division_doc_rows:
+        if file_path and Path(file_path).is_file():
+            Path(file_path).unlink()
+    return True
 
 
 def fetch_upcoming_meetings_with_deadline() -> list[Meeting]:
@@ -852,10 +863,10 @@ def set_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> 
             )
         conn.commit()
         return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("set_document_require failed")
         conn.rollback()
-        return False
+        raise
 
 
 def remove_document_require(meeting_id: int, group_id: str, doc_type_name: str) -> bool:
@@ -880,7 +891,7 @@ def remove_document_require(meeting_id: int, group_id: str, doc_type_name: str) 
             )
         conn.commit()
         return True
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("remove_document_require failed")
         conn.rollback()
-        return False
+        raise
