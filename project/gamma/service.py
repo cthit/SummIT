@@ -33,15 +33,24 @@ def _gamma_auth_header() -> str:
 
 class GammaService:
     _active_group_types = os.getenv("ACTIVE_GROUP_TYPES", "committee").split(",")
-    _https = HTTPSConnectionPool(
-        host=_gamma_hostname(),
-        assert_hostname=_gamma_hostname(),
-        headers={"Authorization": _gamma_auth_header()},
-    )
+    _https_pool: HTTPSConnectionPool | None = None
+
+    @classmethod
+    def _https(cls) -> HTTPSConnectionPool:
+        # Built lazily: constructing it at import time would make every
+        # import of the project (tests, CLI commands) require Gamma
+        # configuration and crash when GAMMA_INFO_AUTH_HEADER is unset.
+        if cls._https_pool is None:
+            cls._https_pool = HTTPSConnectionPool(
+                host=_gamma_hostname(),
+                assert_hostname=_gamma_hostname(),
+                headers={"Authorization": _gamma_auth_header()},
+            )
+        return cls._https_pool
 
     @staticmethod
     def _gamma_get_request(endpoint: str) -> dict:
-        response = GammaService._https.request(
+        response = GammaService._https().request(
             "GET",
             "/api" + endpoint,
         )
