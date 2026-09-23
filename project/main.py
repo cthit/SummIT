@@ -20,6 +20,7 @@ from .auth import login_required, login_as_admin_required
 from .data_handler import (
     LP,
     StudyPeriod,
+    DuplicateDocumentError,
     infer_study_period_from_date,
     create_meeting,
     fetch_meetings,
@@ -477,15 +478,18 @@ def document_upload():
         )
     file_name = secure_filename(uploaded_file.filename) or "document.pdf"
 
-    upload_document(
-        data,
-        file_name,
-        DocumentOwner(actual_owner_id),
-        meeting_id if document_type != DocumentType.LIBERATION else None,
-        document_type,
-        document_subtype.value,
-        is_group,
-    )
+    try:
+        upload_document(
+            data,
+            file_name,
+            DocumentOwner(actual_owner_id),
+            meeting_id if document_type != DocumentType.LIBERATION else None,
+            document_type,
+            document_subtype.value,
+            is_group,
+        )
+    except DuplicateDocumentError as e:
+        return _upload_error(str(e), meetings, selected_meeting)
     flash("Document uploaded successfully.", "success")
     return redirect(url_for("main.doc"))
 

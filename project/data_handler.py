@@ -9,6 +9,10 @@ import hashlib
 UPLOAD_BASE: Path = Path("/") / "data" / "uploads"
 
 
+class DuplicateDocumentError(ValueError):
+    """Raised when the exact same file (name + content) is uploaded again."""
+
+
 class LP(IntEnum):
     LP1 = 1
     LP2 = 2
@@ -250,6 +254,14 @@ def upload_document(
     file_hash = hashlib.md5(the_file)
     file_path = UPLOAD_BASE / (f"{file_hash.hexdigest()}_{file_name}")
 
+    # Check before touching the database: Documents.file_path is UNIQUE, so
+    # a second row for the same file would fail anyway - but failing here
+    # gives the route a clean, user-explainable error instead of a rollback.
+    if file_path.is_file():
+        raise DuplicateDocumentError(
+            "This exact file has already been uploaded."
+        )
+
     create_document_owner(document_owner, is_group)
 
     try:
@@ -341,8 +353,6 @@ def upload_document(
             file_path=file_path,
             uploaded=timestamp,
         )
-        if file_path.is_file():
-            raise Exception("File already exists...?")
         with file_path.open("wb") as f:
             f.write(the_file)
         conn.commit()
