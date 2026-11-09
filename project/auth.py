@@ -11,8 +11,11 @@ from flask import (
 from authlib.integrations.flask_client import OAuth
 from functools import wraps
 from dotenv import load_dotenv
+import logging
 import os
 import requests
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -115,17 +118,27 @@ def callback():
         r.headers.update({"Authorization": auth_header})
         groups_response = r.get(f"{client_api_groups_for}/{id}").json()
 
-        # Filter groups to only include committees
-        active_groups = [
-            {
-                "id": group.get("id"),
-                "prettyName": group.get("prettyName", {}),
-                "name": group.get("superGroup", {}).get("name"),
+        # Filter groups to only include committees.
+        # Key groups on the SUPER-group id (digIT), not the yearly group
+        # instance (digit25): DocumentRequire rows, the group whitelist and
+        # the zip export all identify groups by super-group id, so document
+        # ownership must use the same id space. Dedupe since a user can be
+        # a member of several instances of the same super-group.
+        active_groups_by_id = {}
+        for group in groups_response:
+            super_group = group.get("superGroup", {})
+            if super_group.get("type") == "alumni":
+                continue
+            super_id = super_group.get("id")
+            if not super_id or super_id in active_groups_by_id:
+                continue
+            active_groups_by_id[super_id] = {
+                "id": super_id,
+                "prettyName": super_group.get("prettyName", ""),
+                "name": super_group.get("name"),
                 "post": group.get("post", {}).get("enName"),
             }
-            for group in groups_response
-            if group.get("superGroup", {}).get("type") != "alumni"
-        ]
+        active_groups = list(active_groups_by_id.values())
     # {
     #     "id": "ab44f720-8ed9-48b4-ba2a-6fb2a03db8f6",
     #     "name": "digit25",
@@ -146,9 +159,16 @@ def callback():
     #     }
     # }
 
-    except Exception as e:
-        print(f"Failed to get api information: {e}")
+    except Exception:
+        logger.exception("Failed to get api information")
         active_groups = []
+
+    # Map group names to their real IDs
+    group_id_map = {
+        "digit": "dea3493e-66e4-44b2-a657-cb57a6840dab",
+        "styrit": "45432d44-0de4-4ed0-88ce-8cdf31b72f73",
+        "motespresidit": "cc3fa327-0049-4e1d-b349-57f62223ec55",
+    }
 
     extra_groups = [
         (
@@ -168,9 +188,17 @@ def callback():
                 }
                 if args == "devit_kass"
                 else {
-                    "id": f"dev-group-id-{args}",
+                    "id": group_id_map.get(args, f"dev-group-id-{args}"),
                     "name": args,
-                    "prettyName": "MötespresidIT" if args == "motespresidit" else ("styrIT" if args == "styrit" else args.upper()),
+                    "prettyName": (
+                        "MötespresidIT"
+                        if args == "motespresidit"
+                        else (
+                            "styrIT"
+                            if args == "styrit"
+                            else ("digIT" if args == "digit" else args.upper())
+                        )
+                    ),
                     "post": "Member",
                 }
             )

@@ -5,57 +5,51 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SummIT</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.2/css/bulma.min.css"
-    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
 
   <body>
-    <section class="hero is-primary is-fullheight">
-      <div class="hero-head">
-        <nav class="navbar">
-          <div class="container">
-            <div id="navbarMenuHeroA" class="navbar-menu">
-              <div class="navbar-end">
-                <a href="{{ url_for('main.index') }}" class="navbar-item">
-                  Home
-                </a>
-                <a href="{{ url_for('main.doc') }}" class="navbar-item">
-                  Documents
-                </a>
-                <a href="{{ url_for('main.admin') }}" class="navbar-item">
-                  Admin
-                </a>
-                <a href="{{ url_for('main.profile') }}" class="navbar-item">
-                  Profile
-                </a>
-                <a href="{{ url_for('auth.login') }}" class="navbar-item">
-                  Login
-                </a>
-                <a href="{{ url_for('auth.logout') }}" class="navbar-item">
-                  Logout
-                </a>
-              </div>
-            </div>
-          </div>
-        </nav>
-      </div>
-
-      <div class="hero-body">
-        <div class="container has-text-centered">
-          {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-              {% for category, message in messages %}
-                <div class="notification is-{{ 'danger' if category == 'error' else category }}">
-                  {{ message }}
-                </div>
-              {% endfor %}
-            {% endif %}
-          {% endwith %}
-          {% block content %} {% endblock %}
+    <div class="navbar">
+      <a href="{{ url_for('main.index') }}">
+        {{ t('nav.home') }}
+      </a>
+      {% if g.user %}
+        <a href="{{ url_for('main.doc') }}">
+          {{ t('nav.documents') }}
+        </a>
+        {% if session.get('admin') %}
+        <a href="{{ url_for('main.admin') }}">
+          {{ t('nav.meeting_admin') }}
+        </a>
+        <a href="{{ url_for('main.liberation_admin') }}">
+          {{ t('nav.liberation_admin') }}
+        </a>
+        {% endif %}
+        <a href="{{ url_for('main.profile') }}">
+          {{ t('nav.profile') }}
+        </a>
+        <a href="{{ url_for('auth.logout') }}">
+          {{ t('nav.logout') }}
+        </a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}">
+          {{ t('nav.login') }}
+        </a>
+      {% endif %}
+      <span class="lang-switch">
+        <a href="{{ url_for('main.set_language', lang_code='en') }}">EN</a>
+        <a href="{{ url_for('main.set_language', lang_code='sv') }}">SV</a>
+      </span>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
         </div>
-      </div>
-    </section>
+      {% endif %}
+    {% endwith %}
+    {% block content %} {% endblock %}
   </body>
 </html>

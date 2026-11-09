@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>{{ t('error.title') }}</h1>
+<p>{{ t('error.code') }} {{ error_code }}.</p>
+{% if message %}
+<p>{{ message }}</p>
+{% endif %}
+<p><a href="{{ url_for('main.index') }}">{{ t('error.back_home') }}</a></p>
+
+{% endblock %}

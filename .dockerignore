@@ -10,6 +10,7 @@ tests/
 .env
 .env-example
 .gitignore
+*.temp
 docker-compose.yml
 Dockerfile
 LICENSE

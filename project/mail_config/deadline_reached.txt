@@ -1,0 +1,21 @@
+Dear {{ board_display_name }},
+
+The deadline for document submission for the meeting on {{ meeting_date }} has been reached.
+
+{% if missing %}
+The following required documents were NOT uploaded:
+{% for item in missing %}
+- {{ item }}
+{% endfor %}
+{% else %}
+All required documents were uploaded.
+{% endif %}
+
+You can access all submitted documents at: {{ frontend_url }}
+
+Meeting details:
+- Date: {{ meeting_date }}
+- Document deadline was: {{ deadline_date }} at {{ deadline_time }}
+
+Best regards,
+{{ secretary_display_name }}

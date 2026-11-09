@@ -5,9 +5,9 @@ name: Python application
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
 
 permissions:
   contents: read
@@ -39,7 +39,7 @@ jobs:
         # Run full linting but don't fail the build (exit-zero)
         uvx flake8 ./project --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
         
-# - name: Test with pytest
-#   run: |
-#     uvx pytest
-          
+    - name: Test with pytest
+      run: |
+        uv run pytest
+

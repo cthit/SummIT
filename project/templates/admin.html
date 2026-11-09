@@ -1,33 +1,98 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">Admin</h1>
+<h1>{{ t('admin.title') }}</h1>
 
-<form method="post" action="{{ url_for('main.admin_create_meeting') }}">
-  <label for="year">Year</label>
-  <select id="year" name="year" required>
-    {% for y in years %}
-    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+<div class="center-content">
+  <h2 class="inline-display">{{ t('meeting.select') }}</h2>
+  <select id="meetingSelect" onchange="loadMeetingRequirements()">
+    <option value="">{{ t('meeting.select_placeholder') }}</option>
+    {% for meeting in meetings %}
+    <option value="{{ meeting.id }}">
+      {{ meeting.date }}
+      {% if meeting.study_period.lp != 5 %}{{ t('meeting.study_period', lp=meeting.study_period.lp|int) }}{% else %}{{ t('meeting.summer') }}{% endif %}
+    </option>
     {% endfor %}
   </select>
+  <a href="{{ url_for('main.create_meeting_page') }}">{{ t('admin.create_meeting') }}</a>
+</div>
 
-  <label for="lp">LP</label>
-  <select id="lp" name="lp" required>
-    {% for value, name in lps %}
-    <option value="{{ value }}">{{ name }}</option>
-    {% endfor %}
-  </select>
-  <br>
-  <label for="meeting_date">Meeting date</label>
-  <input id="meeting_date" name="meeting_date" type="date" required />
-  <br><br>
-  <button type="submit">Create meeting</button>
-</form>
+<div id="requirementsContainer" class="hidden">
+  <h2>{{ t('admin.requirements') }}</h2>
+  <div id="requirementsTable"></div>
+  <div class="center-content">
+    <button onclick="downloadMeetingDocuments()">{{ t('admin.download_documents') }}</button>
+    <button onclick="editMeeting()">{{ t('admin.edit_meeting') }}</button>
+    <button onclick="deleteMeeting()">{{ t('admin.delete_meeting') }}</button>
+    <button onclick="send_mail()">{{ t('admin.send_announcement') }}</button>
+  </div>
+</div>
 
-<h2>Meetings</h2>
-<ul>
-  {% for meeting in meetings %}
-    <li>{{ meeting.date }} {% if meeting.study_period.lp != 5 %} Study Period {{ meeting.study_period.lp }} {% else %} Summer {% endif %}</li>
-  {% else %}
-    <li>No meetings yet.</li>
-  {% endfor %}
-</ul>
+<script>
+let currentMeetingId = null;
+
+function loadMeetingRequirements() {
+  const select = document.getElementById('meetingSelect');
+  const meetingId = select.value;
+  const container = document.getElementById('requirementsContainer');
+  const tableDiv = document.getElementById('requirementsTable');
+  
+  if (!meetingId) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  currentMeetingId = meetingId;
+  
+  fetch(`/admin/meeting-requirements/${meetingId}`)
+    .then(r => r.json())
+    .then(data => {
+      let html = '<table class="requirements-table"><thead><tr><th>{{ t('admin.group') }}</th>';
+      
+      data.doc_types.forEach(dt => {
+        html += `<th>${dt[1]}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      
+      data.groups.forEach(group => {
+        html += `<tr><td><strong>${group.pretty_name}</strong></td>`;
+        data.doc_types.forEach(dt => {
+          const checked = data.requires[group.id] && data.requires[group.id].includes(dt[0]) ? '✓' : '';
+          html += `<td>${checked}</td>`;
+        });
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      tableDiv.innerHTML = html;
+      container.style.display = 'block';
+    });
+}
+
+function editMeeting() {
+  if (currentMeetingId) {
+    location.href = `/admin/manage-meeting/${currentMeetingId}`;
+  }
+}
+
+function downloadMeetingDocuments() {
+  if (currentMeetingId) {
+    location.href = `/admin/download-meeting/${currentMeetingId}`;
+  }
+}
+
+
+function deleteMeeting() {
+  if (currentMeetingId && confirm('{{ t('admin.confirm_delete') }}')) {
+    location.href = `/admin/delete-meeting/${currentMeetingId}`;
+  }
+}
+
+function send_mail() {
+  if (currentMeetingId && confirm('{{ t('admin.confirm_announcement') }}')) {
+    // Reload afterwards so the flash message from the route is shown
+    fetch(`/admin/mail/send/${currentMeetingId}`, { method: 'POST' })
+      .then(() => location.reload());
+  }
+}
+</script>
+
 {% endblock %}

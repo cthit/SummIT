@@ -1,56 +1,59 @@
 {% extends "base.html" %} {% block content %}
-<h1 class="title">Documents</h1>
-<h2>Need to upload a document? <a href="/documents/upload">Click here</a></h2>
-<div style="text-align: center">
-  <h2 style="display: inline">Choose meeting:</h2>
-  <form method="get" style="display:inline">
-    <select
-      id="meetingSelect"
-      name="meeting_id"
-      style="margin-left: 10px"
-      onchange="if (this.value) this.form.submit();"
+<h1>{{ t('doc.title') }}</h1>
+<h2>{{ t('doc.upload_prompt') }} <a href="/documents/upload">{{ t('doc.click_here') }}</a></h2>
+<h2 class="inline-display">{{ t('meeting.select') }}</h2>
+<form method="get" class="inline-display">
+  <select
+    id="meetingSelect"
+    name="meeting_id"
+    onchange="if (this.value) this.form.submit();"
+  >
+    <option value="">{{ t('meeting.select_placeholder') }}</option>
+    {% for meeting in meetings %}
+    <option
+      value="{{ meeting.id }}"
+      {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
     >
-      <option value="">Select a meeting...</option>
-      {% for meeting in meetings %}
-      <option
-        value="{{ meeting.id }}"
-        {% if selected_meeting and selected_meeting.id == meeting.id %}selected{% endif %}
-      >
-        {{ meeting.date }}
-        {% if meeting.study_period.lp|int != 5 %}
-          Study Period {{ meeting.study_period.lp|int }}
-        {% else %}
-          Summer
-        {% endif %}
-      </option>
-      {% endfor %}
-    </select>
-  </form>
-</div>
-
+      {{ meeting.date }}
+      {% if meeting.study_period.lp|int != 5 %}
+        {{ t('meeting.study_period', lp=meeting.study_period.lp|int) }}
+      {% else %}
+        {{ t('meeting.summer') }}
+      {% endif %}
+    </option>
+    {% endfor %}
+  </select>
+</form>
 {% if selected_meeting %}
-<div class="content" style="margin-top: 2rem">
-  <div class="notification is-info">
-    <strong>Selected Meeting: </strong>{{ label }}
+<div>
+  <div>
+    <strong>{{ t('doc.selected_meeting') }} </strong>{{ label }}
   </div>
+  {% if selected_meeting.deadline %}
+  <div>
+    <strong>{{ t('doc.deadline') }} </strong>{{ selected_meeting.deadline.strftime('%Y-%m-%d %H:%M') }}
+  </div>
+  {% endif %}
   
   {% if documents_by_owner %}
     {% for owner_id, docs in documents_by_owner.items() %}
-    <div class="box">
+    <div>
       <h3><strong>{{ owner_names.get(owner_id, owner_id) }}</strong></h3>
       <ul>
         {% for doc in docs %}
         <li>
-          <a href="{{ url_for('main.download_document', document_id=doc.id) }}" class="has-text-link">
+          <a href="{{ url_for('main.download_document', document_id=doc.id) }}">
             {{ doc.name }}
           </a> ({{ doc.type }})
+          <a href="{{ url_for('main.delete_document_view', document_id=doc.id) }}"
+             onclick="return confirm('{{ t('doc.confirm_delete') }}');">{{ t('doc.delete') }}</a>
         </li>
         {% endfor %}
       </ul>
     </div>
     {% endfor %}
   {% else %}
-    <div class="notification">No documents found for this meeting.</div>
+    <div>{{ t('doc.none_found') }}</div>
   {% endif %}
 </div>
 {% endif %}

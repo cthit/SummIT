@@ -1,23 +1,50 @@
-from flask import Flask
+from flask import Flask, session
 from dotenv import load_dotenv
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from authlib.integrations.flask_client import OAuth
-from .auth import auth as auth_blueprint
+from .auth import auth as auth_blueprint, set_user_in_g
 from .main import main as main_blueprint
+from .mail import mail as mail_blueprint
 from .database import db
+from .i18n import t
+from .tasks import register_cli
+from .error import (
+    handle_file_too_large,
+    handle_http_exception,
+    handle_unexpected_error,
+)
+import logging
 import os
 
 
 def create_app():
     load_dotenv()
+
+    # Under gunicorn nothing configures logging, leaving app.logger at
+    # WARNING and module loggers silent - set up a real root handler.
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
     gamma_root = os.getenv("GAMMA_ROOT", "https://auth.chalmers.it")
     client_id = os.getenv("GAMMA_CLIENT_ID", "")
     client_secret = os.getenv("GAMMA_CLIENT_SECRET", "")
+    max_content_length = int(os.getenv("APP_MAX_CONTENT_LENGTH","16_000_000"))
 
     app = Flask(__name__)
 
     db.init_app(app)
 
+    app.config['MAX_CONTENT_LENGTH'] = max_content_length
+
     app.config["SECRET_KEY"] = os.getenv("APP_SECRET_KEY", "")
+
+    # Registering HTTPException separately keeps abort(404) etc. out of
+    # the generic 500 handler.
+    app.register_error_handler(RequestEntityTooLarge, handle_file_too_large)
+    app.register_error_handler(HTTPException, handle_http_exception)
+    app.register_error_handler(Exception, handle_unexpected_error)
 
     # Initialize OAuth with the Flask app
     oauth = OAuth(app)
@@ -37,5 +64,16 @@ def create_app():
     app.register_blueprint(auth_blueprint)
 
     app.register_blueprint(main_blueprint)
+
+    app.register_blueprint(mail_blueprint)
+
+    app.jinja_env.globals["t"] = t
+
+    register_cli(app)
+
+    @app.before_request
+    def before_request():
+        if session.get("authenticated"):
+            set_user_in_g()
 
     return app

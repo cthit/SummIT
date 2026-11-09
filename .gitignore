@@ -5,6 +5,10 @@
 
 # project specific
 /gamma
+gapp.json
+
+# oops specific
+*.temp
 
 # User-specific files
 *.rsuser

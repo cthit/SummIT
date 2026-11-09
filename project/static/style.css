@@ -1,0 +1,70 @@
+/* Layout */
+body {
+  background-color: #09CDDA;
+}
+
+div.navbar {
+  display: flex;
+  font-size: 250%;
+  justify-content: space-evenly;
+}
+
+.lang-switch {
+  font-size: 50%;
+  align-self: center;
+}
+
+.center-content {
+  text-align: center;
+}
+
+/* Flash messages */
+.flash {
+  margin: 0.5rem auto;
+  padding: 0.5rem 1rem;
+  max-width: 40rem;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.flash-error {
+  background-color: #fdecea;
+  border-color: #c0392b;
+  color: #7b241c;
+}
+
+.flash-success {
+  background-color: #eafaf1;
+  border-color: #27ae60;
+  color: #1e6b41;
+}
+
+.flash-warning {
+  background-color: #fdf6e3;
+  border-color: #b7950b;
+  color: #7d6608;
+}
+
+.inline-display {
+  display: inline;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Tables */
+.requirements-table {
+  border-collapse: collapse;
+  margin: 2rem auto;
+}
+
+.requirements-table th,
+.requirements-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.requirements-table td.center {
+  text-align: center;
+}

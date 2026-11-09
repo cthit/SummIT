@@ -1,95 +1,185 @@
 @startchen data_base_diagram
 left to right direction
 
-entity "Document" as Doc {
-    document_id : id <<key>>
-    document_name : STRING
-    file_path : STRING <<key>>
-    uploaded : datetime
-}
-
-entity "Division Document" as DivisionDoc {
-
-}
-
-entity "Division Document Type" as DivisionDocType {
-
-}
-
-entity "Meeting Document" as MeetingDoc {
-
-}
-
-entity "Meeting Document Type" as MeetingDocType {
-
-}
-
-entity "Committe" as Committee {
-    id : groupId <<key>>
-}
-
-entity "Member" as Member {
-    id : userId <<key>>
-}
-
-entity "Document Owner" as DocOwner{
-    id : id <<key>>
-
-}
-
-relationship "Owns" as DocOwnerOwnsDoc {
-
-}
-
-DocOwner -N- DocOwnerOwnsDoc
-DocOwnerOwnsDoc =1= Doc
-DocOwner =>= d {Committee, Member}
-
 entity "Study Period" as StudyPeriod {
-    year : INT <<key>>
-    period : INT <<key>>
-    id : id <<key>>
+    study_period_id : SERIAL <<key>>
+    study_year : INTEGER
+    study_period : INTEGER
 }
 
 entity "Meeting" as Meeting {
-    id : id <<key>>
-    date : timestamp <<key>>
+    meeting_id : SERIAL <<key>>
+    meeting_date : DATE
+    study_period_id : INTEGER <<FK>>
+    deadline : TIMESTAMP
+}
+
+entity "Document Owner" as DocOwner {
+    gamma_owner_id : TEXT <<key>>
+}
+
+entity "Member" as Member {
+    gamma_user_id : TEXT <<key, FK>>
+}
+
+entity "Committee" as Committee {
+    gamma_group_id : TEXT <<key, FK>>
+}
+
+entity "Document" as Doc {
+    document_id : SERIAL <<key>>
+    document_name : TEXT
+    gamma_owner_id : TEXT <<FK>>
+    file_path : TEXT <<unique>>
+    uploaded : TIMESTAMP
+}
+
+entity "Meeting Document" as MeetingDoc {
+    document_id : INTEGER <<key, FK>>
+    type_id : INTEGER <<FK>>
+    meeting_id : INTEGER <<FK>>
+}
+
+entity "Meeting Document Type" as MeetingDocType {
+    type_id : SERIAL <<key>>
+    type_name : TEXT <<unique>>
+}
+
+entity "Division Document" as DivisionDoc {
+    document_id : INTEGER <<key, FK>>
+    type_id : INTEGER <<FK>>
+    study_period_id : INTEGER <<FK>>
+}
+
+entity "Division Document Type" as DivisionDocType {
+    type_id : SERIAL <<key>>
+    type_name : TEXT <<unique>>
+}
+
+entity "Liberation Document" as LiberationDoc {
+    document_id : INTEGER <<key, FK>>
+    type_id : INTEGER <<FK>>
+}
+
+entity "Liberation Document Type" as LiberationDocType {
+    type_id : SERIAL <<key>>
+    type_name : TEXT <<unique>>
+}
+
+entity "Document Requirement" as DocRequire {
+    document_type_id : INTEGER <<key, FK>>
+    meeting_id : INTEGER <<key, FK>>
+    gamma_owner_id : TEXT <<key, FK>>
+}
+
+entity "Liberation Requirement" as LiberationRequire {
+    gamma_owner_id : TEXT <<FK>>
+    group_name : TEXT <<key>>
+    group_pretty_name : TEXT
+    document_type_id : INTEGER <<key, FK>>
+}
+
+entity "Sent Mail" as SentMail {
+    sent_mail_id : SERIAL <<key>>
+    mail_type : TEXT
+    meeting_id : INTEGER <<FK>>
+    gamma_owner_id : TEXT <<FK>>
+    sent_at : TIMESTAMP
 }
 
 relationship "Has" as StudyPeriodHasMeeting {
 }
 
-Meeting =N= StudyPeriodHasMeeting
-StudyPeriodHasMeeting -1- StudyPeriod
+StudyPeriod -1- StudyPeriodHasMeeting
+StudyPeriodHasMeeting =N= Meeting
 
-Doc =>= d {DivisionDoc, MeetingDoc}
-
-relationship "Has" as StudyPeriodHasDivisionDoc {
-
+relationship "Owns" as OwnerOwnsDocument {
 }
 
-StudyPeriod -1- StudyPeriodHasDivisionDoc
-StudyPeriodHasDivisionDoc =N= DivisionDoc
+DocOwner -1- OwnerOwnsDocument
+OwnerOwnsDocument =N= Doc
 
-relationship "Has" as MeetingHasMeetingDoc {
+DocOwner =>= d {Member, Committee}
 
+relationship "Classifies" as MeetingDocumentClassification {
 }
 
-Meeting -1- MeetingHasMeetingDoc
-MeetingHasMeetingDoc =N= MeetingDoc
+Doc =1= MeetingDocumentClassification
+MeetingDocumentClassification -1- MeetingDoc
 
-relationship "Is of type" as DivOfType {
-
+relationship "Is of type" as MeetingDocumentTypeClassification {
 }
 
-relationship "Is of type" as MeetOfType {
-    
+MeetingDocType -1- MeetingDocumentTypeClassification
+MeetingDocumentTypeClassification =N= MeetingDoc
+
+relationship "Belongs to" as MeetingHasDocument {
 }
 
-DivisionDocType -1- DivOfType
-DivOfType =N= DivisionDoc
+Meeting -1- MeetingHasDocument
+MeetingHasDocument =N= MeetingDoc
 
-MeetingDocType -1- MeetOfType
-MeetOfType =N= MeetingDoc
+relationship "Classifies" as DivisionDocumentClassification {
+}
+
+Doc =1= DivisionDocumentClassification
+DivisionDocumentClassification -1- DivisionDoc
+
+relationship "Is of type" as DivisionDocumentTypeClassification {
+}
+
+DivisionDocType -1- DivisionDocumentTypeClassification
+DivisionDocumentTypeClassification =N= DivisionDoc
+
+relationship "Belongs to" as StudyPeriodHasDivisionDocument {
+}
+
+StudyPeriod -1- StudyPeriodHasDivisionDocument
+StudyPeriodHasDivisionDocument =N= DivisionDoc
+
+relationship "Classifies" as LiberationDocumentClassification {
+}
+
+Doc =1= LiberationDocumentClassification
+LiberationDocumentClassification -1- LiberationDoc
+
+relationship "Is of type" as LiberationDocumentTypeClassification {
+}
+
+LiberationDocType -1- LiberationDocumentTypeClassification
+LiberationDocumentTypeClassification =N= LiberationDoc
+
+relationship "Requires" as MeetingDocumentRequirement {
+}
+
+DivisionDocType -1- MeetingDocumentRequirement
+MeetingDocumentRequirement =N= DocRequire
+
+Meeting -1- MeetingDocumentRequirement
+MeetingDocumentRequirement =N= DocRequire
+
+DocOwner -1- MeetingDocumentRequirement
+MeetingDocumentRequirement =N= DocRequire
+
+relationship "Requires" as LiberationDocumentRequirement {
+}
+
+LiberationDocType -1- LiberationDocumentRequirement
+LiberationDocumentRequirement =N= LiberationRequire
+
+DocOwner -1- LiberationDocumentRequirement
+LiberationDocumentRequirement =N= LiberationRequire
+
+relationship "Records" as MeetingMail {
+}
+
+Meeting -1- MeetingMail
+MeetingMail =N= SentMail
+
+relationship "Receives" as OwnerMail {
+}
+
+DocOwner -1- OwnerMail
+OwnerMail =N= SentMail
 
 @endchen
