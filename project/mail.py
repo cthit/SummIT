@@ -82,9 +82,10 @@ def send_mail_route(meeting_id):
         }
 
         try:
+            period_name = "Summer" if lp == 5 else f"lp{lp}"
             send_mail_config(
                 [f"{name}@chalmers.it"],
-                f"Meeting Announcement {"Summer" if lp == 5 else f"lp{lp}"} {year}",
+                f"Meeting Announcement {period_name} {year}",
                 "meeting_announcement.txt",
                 vars,
             )
