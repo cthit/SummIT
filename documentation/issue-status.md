@@ -1,12 +1,16 @@
 # Issue verification
 
-**Branch reviewed:** `main`
+**Branch reviewed:** `dev`
 **Compared with:** `main`  
-**Review date:** 2026-11-09
+**Review date:** 2026-11-10
 
 | Issue | Status | Implementation status | Evidence and conclusion |
 | --- | --- | --- | --- |
 | [#18](https://github.com/cthit/SummIT/issues/18) Control who can upload what from admin GUI | Open | Partial | Admins can configure division-document requirements in the meeting administration UI, and the upload UI restricts personal uploads. The UI still allows a group to select non-required division types, so the complete “depending on group and requirements” behavior is not demonstrated. |
+| [#22](https://github.com/cthit/SummIT/issues/22) Auto select latest meeting | Open | Not implemented | Document and upload pages require an explicit meeting selection; no automatic latest-meeting selection or “change meeting” flow is present. |
+| [#21](https://github.com/cthit/SummIT/issues/21) Meeting announcement should go to all committees | Open | Partial | The announcement route sends only to groups returned by `get_document_requires(meeting_id)`, so whitelisted groups without requirements are still excluded. |
+| [#20](https://github.com/cthit/SummIT/issues/20) Motion handling | Open | Partial | Motion is supported as an upload subtype and the database has motion document support, but the requested review workflow, visibility rules, mail notification, and deadline lock are not implemented. |
+| [#19](https://github.com/cthit/SummIT/issues/19) Limit upload amounts for certain documents | Open | Partial | Duplicate document content is rejected, but there is no complete per-year, per-committee, or per-meeting cardinality enforcement for the document types listed in the issue. |
 | [#17](https://github.com/cthit/SummIT/issues/17) Weird error when uploading a file too large | Open | Partial | `MAX_CONTENT_LENGTH` is configured and `RequestEntityTooLarge` has a dedicated translated error handler, but the issue remains open because the complete behavior is not verified as resolved. |
 | [#16](https://github.com/cthit/SummIT/issues/16) Overwrite duplicate files | Open | Not implemented | Duplicate content is detected and rejected with a user-facing message. No overwrite path is present. |
 | [#15](https://github.com/cthit/SummIT/issues/15) Download only relevant liberation documents | Open | Not resolved | The admin download query selects liberation documents for all whitelisted groups, rather than filtering them by the configured yearly liberation requirements. |

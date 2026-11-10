@@ -33,7 +33,8 @@ reference.
 ├── tests/                       Automated tests
 ├── wsgi.py                      WSGI entry point
 ├── Dockerfile                   Web application image
-└── docker-compose.yml            Web, mailer, database, and Gotify services
+├── docker-compose.yml            Local web, mailer, database, and Gotify services
+└── docker-compose-prod.yml       Portainer deployment using published images
 ```
 
 ## Application startup
@@ -82,6 +83,15 @@ Meetings refer to a `StudyPeriods` row and may have a deadline. Requirement
 tables connect meetings or liberation group instances to required document
 types. `SentMails` makes scheduled mail operations idempotent.
 
+OAuth callback URLs are generated from the request during local development.
+The production Compose file sets `PUBLIC_URL=https://summit.chalmers.it`, so
+the Gamma callback is explicitly generated as
+`https://summit.chalmers.it/api/auth/callbacks/gamma`.
+
+When `DEV_ENV` is enabled, the profile page exposes a development-only test
+mail button. It calls `mail_example.py` through the application rather than
+running a separate process.
+
 ## Background mail processing
 
 The `summit_mailer` service runs the Flask `send-due-mails` command
@@ -99,9 +109,18 @@ variable checking before sending through Gotify.
 - `summit_db`: PostgreSQL with persistent database storage; and
 - `gotify`: the mail delivery service.
 
+`docker-compose-prod.yml` uses the published GHCR images
+`ghcr.io/cthit/summit:dev` and `ghcr.io/cthit/summit-db:dev`. Its web service
+is attached to the external `traefik` network and is routed to
+`summit.chalmers.it` with TLS. The web and mailer services use the generic
+external `gotify-mock` network for the current Portainer demo; the mock service
+is maintained as a separate stack and can be shared by other services.
+
+The Docker workflow in `.github/workflows/docker.yml` builds and publishes the
+application and seeded database images to GHCR on pushes to `dev` and `main`.
 Environment-specific credentials, OAuth settings, database settings, and
-upload limits are supplied through `.env`; `.env-example` documents the
-expected variables.
+upload limits are supplied through `.env` or Portainer stack variables;
+`.env-example` documents the expected variables.
 
 ## Verification scope
 

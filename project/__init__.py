@@ -39,6 +39,7 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = max_content_length
 
     app.config["SECRET_KEY"] = os.getenv("APP_SECRET_KEY", "")
+    app.config["PUBLIC_URL"] = os.getenv("PUBLIC_URL", "").rstrip("/")
 
     # Registering HTTPException separately keeps abort(404) etc. out of
     # the generic 500 handler.

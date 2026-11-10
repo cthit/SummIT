@@ -55,6 +55,12 @@
   <div>
     <a href="{{ url_for('auth.logout') }}">{{ t('nav.logout') }}</a>
   </div>
+
+  {% if dev_mode %}
+  <form action="{{ url_for('main.test_mail') }}" method="POST">
+    <button type="submit">Send test mail</button>
+  </form>
+  {% endif %}
 </div>
 {% else %}
 <div>
