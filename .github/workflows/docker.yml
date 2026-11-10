@@ -17,8 +17,8 @@ jobs:
             context: .
             dockerfile: Dockerfile
           - image: summit-db
-            context: .
-            dockerfile: summit_database/Dockerfile
+            context: summit_database
+            dockerfile: Dockerfile
 
     steps:
       - uses: actions/checkout@v7.0.1
