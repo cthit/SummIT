@@ -8,7 +8,7 @@ def example_simple_mail():
     print("Sending email...")
 
     response = send_mail(
-        to=["napster@chalmers.it", "hero@chalmers.it"],
+        to=["napster@chalmers.it"],
         subject="Test Email",
         body="It worked B)",
     )

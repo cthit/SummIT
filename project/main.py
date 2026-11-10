@@ -19,7 +19,8 @@ import os
 import io
 import zipfile
 from werkzeug.utils import secure_filename
-from .auth import login_required, login_as_admin_required, is_admin
+from .auth import devmode_active, login_required, login_as_admin_required, is_admin
+from .mail_example import example_simple_mail
 from .data_handler import (
     LP,
     DuplicateDocumentError,
@@ -165,7 +166,20 @@ def set_language(lang_code):
 @main.route("/profile")
 @login_required
 def profile():
-    return render_template("profile.html", user=g.get("user"))
+    return render_template(
+        "profile.html", user=g.get("user"), dev_mode=devmode_active()
+    )
+
+
+@main.route("/profile/test-mail", methods=["POST"])
+@login_required
+def test_mail():
+    if not devmode_active():
+        abort(404)
+
+    example_simple_mail()
+    flash("Test email sent.")
+    return redirect(url_for("main.profile"))
 
 
 @main.route("/documents")
