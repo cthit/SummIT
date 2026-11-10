@@ -1,10 +1,30 @@
+x-app-environment: &app-environment
+  GAMMA_ROOT: "${GAMMA_ROOT:-}"
+  GAMMA_CLIENT_ID: "${GAMMA_CLIENT_ID:-}"
+  GAMMA_CLIENT_SECRET: "${GAMMA_CLIENT_SECRET:-}"
+  GAMMA_CLIENT_API_KEY: "${GAMMA_CLIENT_API_KEY:-}"
+  AUTH_HEADER: "${AUTH_HEADER:-}"
+  APP_SECRET_KEY: "${APP_SECRET_KEY:-}"
+  APP_MAX_CONTENT_LENGTH: "${APP_MAX_CONTENT_LENGTH:-16000000}"
+  FLASK_APP: "${FLASK_APP:-project}"
+  FLASK_DEBUG: "${FLASK_DEBUG:-0}"
+  DEV_ENV: "${DEV_ENV:-1}"
+  DB_HOST: "${DB_HOST:-summit_db}"
+  DB_PORT: "${DB_PORT:-5432}"
+  POSTGRES_DB: "${POSTGRES_DB:-summit_db}"
+  POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
+  GOTIFY_URL: "${GOTIFY_URL:-http://gotify:8080}"
+  GOTIFY_PRE_SHARED_KEY: "${GOTIFY_PRE_SHARED_KEY:-}"
+  GAMMA_INFO_API_KEY: "${GAMMA_INFO_API_KEY:-}"
+  GAMMA_INFO_AUTH_HEADER: "${GAMMA_INFO_AUTH_HEADER:-}"
+  MAIL_REMINDER_DAYS_BEFORE: "${MAIL_REMINDER_DAYS_BEFORE:-3}"
+
 services:
   summit_web:
     build: .
     ports:
       - "5000:5000"
-    env_file:
-      - .env
     volumes:
       - summit_uploads:/data/uploads
     depends_on: 
@@ -12,6 +32,7 @@ services:
         condition: service_healthy
     restart: on-failure
     environment:
+      <<: *app-environment
       # Deadlines are stored as naive timestamps; pin the container clock
       # so they mean local (Swedish) time.
       TZ: Europe/Stockholm
@@ -19,8 +40,6 @@ services:
   
   summit_mailer:
     build: .
-    env_file:
-      - .env
     # One short-lived process per tick; the SentMails table makes every
     # tick idempotent, so restarts and overlaps never double-send.
     command: sh -c 'while true; do uv run flask send-due-mails || echo "send-due-mails failed"; sleep 900; done'
@@ -31,16 +50,19 @@ services:
         condition: service_started
     restart: on-failure
     environment:
+      <<: *app-environment
       TZ: Europe/Stockholm
 
   summit_db:
     build: summit_database
-    env_file: 
-      - .env
     ports:
       - "5432:5432"
     volumes:
       - summit_database_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-summit_db}"
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
     healthcheck:
       test: ['CMD', 'pg_isready']
       interval: 5s
