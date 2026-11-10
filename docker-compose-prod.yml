@@ -14,8 +14,8 @@ x-app-environment: &app-environment
   POSTGRES_DB: "${POSTGRES_DB:-summit_db}"
   POSTGRES_USER: "${POSTGRES_USER:-postgres}"
   POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
-  GOTIFY_URL: "${GOTIFY_URL:-http://gotify:8080}"
-  GOTIFY_PRE_SHARED_KEY: "${GOTIFY_PRE_SHARED_KEY:-}"
+  GOTIFY_URL: "http://gotify-mock:8080"
+  GOTIFY_PRE_SHARED_KEY: "mock-key"
   GAMMA_INFO_API_KEY: "${GAMMA_INFO_API_KEY:-}"
   GAMMA_INFO_AUTH_HEADER: "${GAMMA_INFO_AUTH_HEADER:-}"
   MAIL_REMINDER_DAYS_BEFORE: "${MAIL_REMINDER_DAYS_BEFORE:-3}"
@@ -41,7 +41,7 @@ services:
       traefik.http.routers.summit.tls: "true"
     networks:
       - default
-      - gotify
+      - gotify-mock
       - traefik
 
   summit_mailer:
@@ -56,7 +56,7 @@ services:
       TZ: Europe/Stockholm
     networks:
       - default
-      - gotify
+      - gotify-mock
 
   summit_db:
     image: ghcr.io/cthit/summit-db:dev
@@ -81,7 +81,7 @@ volumes:
 
 networks:
   default:
-  gotify:
+  gotify-mock:
     external: true
   traefik:
     external: true
