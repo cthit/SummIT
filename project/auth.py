@@ -91,7 +91,13 @@ def authorize():
     gamma = get_gamma()
     if devmode_active():
         session["selected_extra_groups"] = request.args.getlist("extra_groups")
-    return gamma.authorize_redirect(url_for("auth.callback", _external=True))
+    public_url = current_app.config.get("PUBLIC_URL", "")
+    callback_url = (
+        f"{public_url}{url_for('auth.callback')}"
+        if public_url
+        else url_for("auth.callback", _external=True)
+    )
+    return gamma.authorize_redirect(callback_url)
 
 
 @auth.route("/api/auth/callbacks/gamma")

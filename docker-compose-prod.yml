@@ -19,6 +19,7 @@ x-app-environment: &app-environment
   GAMMA_INFO_API_KEY: "${GAMMA_INFO_API_KEY:-}"
   GAMMA_INFO_AUTH_HEADER: "${GAMMA_INFO_AUTH_HEADER:-}"
   MAIL_REMINDER_DAYS_BEFORE: "${MAIL_REMINDER_DAYS_BEFORE:-3}"
+  PUBLIC_URL: "https://summit.chalmers.it"
 
 services:
   summit_web:
