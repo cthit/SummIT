@@ -78,6 +78,14 @@
       <div id="division_requirement_warning" class="hidden"></div>
     </div>
     <div id="liberation_subtype" class="hidden">
+      <label>{{ t('upload.liberation_group') }}</label><br>
+      <select name="liberation_group_name">
+        <option value="">{{ t('upload.select_liberation_group') }}</option>
+        {% for group in liberation_groups %}
+        <option value="{{ group.group_name }}">{{ group.group_pretty_name }}</option>
+        {% endfor %}
+      </select>
+      <br>
       <label>{{ t('upload.liberation_subtype') }}</label><br>
       <select name="liberation_document_subtype">
         <option value="">{{ t('upload.select_type') }}</option>
@@ -189,6 +197,7 @@ function toggleDocumentSubtype() {
   const meetingSelect = document.querySelector('select[name="meeting_document_subtype"]');
   const divisionSelect = document.querySelector('select[name="division_document_subtype"]');
   const liberationSelect = document.querySelector('select[name="liberation_document_subtype"]');
+  const liberationGroupSelect = document.querySelector('select[name="liberation_group_name"]');
   
   if (meetingRadio.checked) {
     meetingSubtype.style.display = 'block';
@@ -204,6 +213,7 @@ function toggleDocumentSubtype() {
     meetingSelect.required = false;
     divisionSelect.required = true;
     liberationSelect.required = false;
+    liberationGroupSelect.required = false;
   } else if (liberationRadio.checked) {
     meetingSubtype.style.display = 'none';
     divisionSubtype.style.display = 'none';
@@ -211,6 +221,7 @@ function toggleDocumentSubtype() {
     meetingSelect.required = false;
     divisionSelect.required = false;
     liberationSelect.required = true;
+    liberationGroupSelect.required = true;
   }
   updateDivisionWarning();
 }
@@ -234,6 +245,9 @@ window.addEventListener('DOMContentLoaded', function() {
       'error.file_too_large',
       max_mb=(config['MAX_CONTENT_LENGTH'] // 1000000)
     )|tojson }};
+    const replacePrompt = {{ t('upload.replace_prompt')|tojson }};
+    const uploadCheckFailedMessage = {{ t('flash.upload_check_failed')|tojson }};
+    let submitApproved = false;
 
     form.addEventListener('submit', function(event) {
       const file = fileInput.files[0];
@@ -241,7 +255,35 @@ window.addEventListener('DOMContentLoaded', function() {
         event.preventDefault();
         fileSizeError.textContent = fileTooLargeMessage;
         fileSizeError.className = 'flash flash-error';
+        return;
       }
+      if (submitApproved) return;
+
+      event.preventDefault();
+      const fields = new FormData(form);
+      fields.delete('file');
+      fetch('{{ url_for("main.upload_conflict_check") }}', {
+        method: 'POST',
+        body: new URLSearchParams(fields)
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (!result.conflict || window.confirm(replacePrompt)) {
+            if (result.conflict) {
+              const replacement = document.createElement('input');
+              replacement.type = 'hidden';
+              replacement.name = 'replace_document_id';
+              replacement.value = result.document_id;
+              form.appendChild(replacement);
+            }
+            submitApproved = true;
+            form.submit();
+          }
+        })
+        .catch(() => {
+          fileSizeError.textContent = uploadCheckFailedMessage;
+          fileSizeError.className = 'flash flash-error';
+        });
     });
   }
   

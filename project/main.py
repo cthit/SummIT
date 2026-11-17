@@ -24,6 +24,7 @@ from .mail_example import example_simple_mail
 from .data_handler import (
     LP,
     DuplicateDocumentError,
+    UploadLimitError,
     infer_study_period_from_date,
     create_meeting,
     fetch_meetings,
@@ -43,11 +44,13 @@ from .data_handler import (
     delete_document,
     delete_meeting_and_documents,
     remove_document_require,
+    replace_document,
     update_meeting_deadline,
     get_liberation_requires,
     set_liberation_require,
     remove_liberation_require,
     get_missing_liberation_documents,
+    find_existing_document,
 )
 from .gamma import GammaService as gs
 from .i18n import LANGUAGES, t
@@ -71,6 +74,47 @@ def _meeting_label(meeting):
         t("meeting.summer") if lp_int == 5 else t("meeting.study_period", lp=lp_int)
     )
     return f"{meeting.date} - {lp_label}"
+
+
+def _group_ids(user):
+    return [group.get("id") for group in user.get("groups", [])]
+
+
+def _document_access(user):
+    alumni_groups = user.get("alumni", [])
+    return (
+        [user["id"]] + _group_ids(user),
+        [group.get("name") for group in alumni_groups if group.get("name")],
+        [
+            group.get("superGroup", {}).get("id")
+            for group in alumni_groups
+            if group.get("superGroup", {}).get("id")
+        ],
+    )
+
+
+def _form_document_subtype(form, document_type):
+    field = {
+        "meeting": "meeting_document_subtype",
+        "division": "division_document_subtype",
+        "liberation": "liberation_document_subtype",
+    }.get(document_type)
+    return form.get(field) if field else None
+
+
+def _authorized_liberation_requirement(group_name):
+    requirement = next(
+        (
+            item
+            for item in get_liberation_requires()
+            if item["group_name"] == group_name
+        ),
+        None,
+    )
+    alumni_names = {
+        group.get("name") for group in g.user.get("alumni", [])
+    }
+    return requirement if requirement and group_name in alumni_names else None
 
 
 def _get_groups():
@@ -196,7 +240,7 @@ def doc():
     documents_by_owner = {}
     owner_names = {user["id"]: t("doc.my_documents")}
     if selected_meeting:
-        group_ids = [g.get("id") for g in user.get("groups", [])]
+        group_ids = _group_ids(user)
         documents_by_owner = fetch_documents_for_meeting(
             selected_meeting.id, user["id"], group_ids
         )
@@ -472,6 +516,16 @@ def _render_upload_form(meetings=None, selected_meeting=None):
         and selected_meeting.deadline
         and datetime.now() > selected_meeting.deadline
     )
+    alumni_by_name = {
+        group.get("name"): group
+        for group in g.user.get("alumni", [])
+        if group.get("name")
+    }
+    liberation_groups = [
+        requirement
+        for requirement in get_liberation_requires()
+        if requirement["group_name"] in alumni_by_name
+    ]
     return render_template(
         "upload.html",
         meetings=meetings,
@@ -482,6 +536,7 @@ def _render_upload_form(meetings=None, selected_meeting=None):
         liberation_doc_types=LiberationDocumentTypes,
         requires=requires,
         deadline_passed=deadline_passed,
+        liberation_groups=liberation_groups,
     )
 
 
@@ -503,15 +558,8 @@ def document_upload():
     meeting_id = request.form.get("meeting_id", type=int)
     document_type_str = request.form.get("document_type")
     owner_id = request.form.get("owner_id")
-    document_subtype_str = (
-        request.form.get("meeting_document_subtype")
-        if document_type_str == "meeting"
-        else (
-            request.form.get("liberation_document_subtype")
-            if document_type_str == "liberation"
-            else request.form.get("division_document_subtype")
-        )
-    )
+    document_subtype_str = _form_document_subtype(request.form, document_type_str)
+    liberation_group_name = request.form.get("liberation_group_name")
 
     meetings = fetch_meetings()
     selected_meeting = (
@@ -520,6 +568,7 @@ def document_upload():
 
     if not uploaded_file:
         return _upload_error(t("flash.no_file"), meetings, selected_meeting)
+
 
     # Meeting is only required for meeting and division documents.
     # Validate that the submitted id refers to a real meeting: a forged or
@@ -531,6 +580,17 @@ def document_upload():
         return _upload_error(
             t("flash.no_owner"), meetings, selected_meeting
         )
+
+    liberation_requirement = None
+    if document_type_str == "liberation":
+        liberation_requirement = _authorized_liberation_requirement(
+            liberation_group_name
+        )
+        if liberation_requirement is None:
+            return _upload_error(
+                t("flash.liberation_not_member"), meetings, selected_meeting
+            )
+        owner_id = liberation_requirement["super_group_id"]
 
     try:
         document_type = DocumentType(document_type_str)
@@ -593,7 +653,10 @@ def document_upload():
     # Determine the actual owner ID (self or group). A user may only
     # upload on behalf of groups they are actually a member of - the
     # form value cannot be trusted.
-    if owner_id == "self":
+    if document_type == DocumentType.LIBERATION:
+        actual_owner_id = owner_id
+        is_group = True
+    elif owner_id == "self":
         actual_owner_id = g.user["id"]
         is_group = False
     else:
@@ -614,8 +677,44 @@ def document_upload():
     if expected_signature is None or not data.startswith(expected_signature):
         return _upload_error(t("flash.pdf_only"), meetings, selected_meeting)
     file_name = secure_filename(uploaded_file.filename) or "document.pdf"
+    replacement_id = request.form.get("replace_document_id", type=int)
 
     try:
+        if replacement_id:
+            (
+                allowed_owner_ids,
+                allowed_liberation_groups,
+                allowed_liberation_owner_ids,
+            ) = _document_access(g.user)
+            existing_id = find_existing_document(
+                actual_owner_id,
+                meeting_id if document_type != DocumentType.LIBERATION else None,
+                document_type,
+                document_subtype.value,
+                liberation_group_name,
+            )
+            if existing_id != replacement_id:
+                return _upload_error(
+                    t("flash.document_replace_denied"),
+                    meetings,
+                    selected_meeting,
+                )
+            if not replace_document(
+                replacement_id,
+                data,
+                file_name,
+                allowed_owner_ids,
+                allowed_liberation_groups,
+                allowed_liberation_owner_ids,
+            ):
+                return _upload_error(
+                    t("flash.document_replace_denied"),
+                    meetings,
+                    selected_meeting,
+                )
+            flash(t("flash.document_replaced"), "success")
+            return redirect(url_for("main.doc"))
+
         upload_document(
             data,
             file_name,
@@ -624,9 +723,20 @@ def document_upload():
             document_type,
             document_subtype.value,
             is_group,
+            liberation_group_name=liberation_group_name,
         )
     except DuplicateDocumentError:
         return _upload_error(t("flash.duplicate_file"), meetings, selected_meeting)
+    except UploadLimitError as error:
+        return _upload_error(
+            t(
+                "flash.upload_limit",
+                document_type=error.document_type,
+                scope=error.scope,
+            ),
+            meetings,
+            selected_meeting,
+        )
     except ValueError:
         # "Meeting does not exist." from upload_document
         return _upload_error(t("flash.invalid_meeting"), meetings, selected_meeting)
@@ -634,12 +744,40 @@ def document_upload():
     return redirect(url_for("main.doc"))
 
 
+@main.route("/documents/upload/check", methods=["POST"])
+@login_required
+def upload_conflict_check():
+    document_type = request.form.get("document_type")
+    owner_id = request.form.get("owner_id")
+    subtype = _form_document_subtype(request.form, document_type)
+    if document_type == "liberation":
+        group_name = request.form.get("liberation_group_name")
+        requirement = _authorized_liberation_requirement(group_name)
+        if requirement is None:
+            return jsonify({"conflict": False})
+        owner_id = requirement["super_group_id"]
+    elif owner_id == "self":
+        owner_id = g.user["id"]
+
+    try:
+        kind = DocumentType(document_type)
+        document_id = find_existing_document(
+            owner_id,
+            request.form.get("meeting_id", type=int),
+            kind,
+            subtype,
+            request.form.get("liberation_group_name"),
+        )
+    except (TypeError, ValueError):
+        return jsonify({"conflict": False})
+    return jsonify({"conflict": bool(document_id), "document_id": document_id})
+
+
 @main.route("/documents/download/<int:document_id>")
 @login_required
 def download_document(document_id):
     user = g.get("user")
-    group_ids = [g.get("id") for g in user.get("groups", [])]
-    all_owner_ids = [user["id"]] + group_ids
+    all_owner_ids, _, _ = _document_access(user)
 
     doc = fetch_document_by_id(document_id, all_owner_ids)
     if not doc:
@@ -657,8 +795,7 @@ def download_document(document_id):
 @login_required
 def delete_document_view(document_id):
     user = g.get("user")
-    group_ids = [g.get("id") for g in user.get("groups", [])]
-    all_owner_ids = [user["id"]] + group_ids
+    all_owner_ids, _, _ = _document_access(user)
 
     success = delete_document(document_id, all_owner_ids)
     if success:

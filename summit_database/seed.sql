@@ -41,7 +41,9 @@ CREATE TABLE IF NOT EXISTS LiberationDocumentTypes (
 
 CREATE TABLE IF NOT EXISTS LiberationDocuments (
     document_id INTEGER PRIMARY KEY REFERENCES Documents(document_id),
-    type_id INTEGER REFERENCES LiberationDocumentTypes(type_id)
+    type_id INTEGER REFERENCES LiberationDocumentTypes(type_id),
+    group_name TEXT NOT NULL,
+    UNIQUE (group_name, type_id)
 );
 
 CREATE TABLE IF NOT EXISTS MeetingDocumentTypes (
