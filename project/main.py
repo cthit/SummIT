@@ -93,6 +93,30 @@ def _document_access(user):
     )
 
 
+def _form_document_subtype(form, document_type):
+    field = {
+        "meeting": "meeting_document_subtype",
+        "division": "division_document_subtype",
+        "liberation": "liberation_document_subtype",
+    }.get(document_type)
+    return form.get(field) if field else None
+
+
+def _authorized_liberation_requirement(group_name):
+    requirement = next(
+        (
+            item
+            for item in get_liberation_requires()
+            if item["group_name"] == group_name
+        ),
+        None,
+    )
+    alumni_names = {
+        group.get("name") for group in g.user.get("alumni", [])
+    }
+    return requirement if requirement and group_name in alumni_names else None
+
+
 def _get_groups():
     whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
     whitelist = (
@@ -534,15 +558,7 @@ def document_upload():
     meeting_id = request.form.get("meeting_id", type=int)
     document_type_str = request.form.get("document_type")
     owner_id = request.form.get("owner_id")
-    document_subtype_str = (
-        request.form.get("meeting_document_subtype")
-        if document_type_str == "meeting"
-        else (
-            request.form.get("liberation_document_subtype")
-            if document_type_str == "liberation"
-            else request.form.get("division_document_subtype")
-        )
-    )
+    document_subtype_str = _form_document_subtype(request.form, document_type_str)
     liberation_group_name = request.form.get("liberation_group_name")
 
     meetings = fetch_meetings()
@@ -567,18 +583,10 @@ def document_upload():
 
     liberation_requirement = None
     if document_type_str == "liberation":
-        liberation_requirement = next(
-            (
-                requirement
-                for requirement in get_liberation_requires()
-                if requirement["group_name"] == liberation_group_name
-            ),
-            None,
+        liberation_requirement = _authorized_liberation_requirement(
+            liberation_group_name
         )
-        alumni_names = {
-            group.get("name") for group in g.user.get("alumni", [])
-        }
-        if liberation_requirement is None or liberation_group_name not in alumni_names:
+        if liberation_requirement is None:
             return _upload_error(
                 t("flash.liberation_not_member"), meetings, selected_meeting
             )
@@ -741,27 +749,11 @@ def document_upload():
 def upload_conflict_check():
     document_type = request.form.get("document_type")
     owner_id = request.form.get("owner_id")
-    subtype = request.form.get(
-        "meeting_document_subtype"
-        if document_type == "meeting"
-        else (
-            "liberation_document_subtype"
-            if document_type == "liberation"
-            else "division_document_subtype"
-        )
-    )
+    subtype = _form_document_subtype(request.form, document_type)
     if document_type == "liberation":
-        requirement = next(
-            (
-                item
-                for item in get_liberation_requires()
-                if item["group_name"] == request.form.get("liberation_group_name")
-            ),
-            None,
-        )
-        if not requirement or request.form.get("liberation_group_name") not in {
-            group.get("name") for group in g.user.get("alumni", [])
-        }:
+        group_name = request.form.get("liberation_group_name")
+        requirement = _authorized_liberation_requirement(group_name)
+        if requirement is None:
             return jsonify({"conflict": False})
         owner_id = requirement["super_group_id"]
     elif owner_id == "self":
