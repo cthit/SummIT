@@ -135,19 +135,13 @@ def callback():
         active_groups_by_id = {}
         for group in groups_response:
             super_group = group.get("superGroup", {})
-            group_data = {
-                "id": group.get("id"),
-                "name": group.get("name"),
-                "prettyName": group.get("prettyName", ""),
-                "superGroup": {
-                    "id": super_group.get("id"),
-                    "name": super_group.get("name"),
-                    "prettyName": super_group.get("prettyName", ""),
-                },
-                "post": group.get("post", {}).get("enName"),
-            }
             if super_group.get("type") == "alumni":
-                alumni_groups.append(group_data)
+                alumni_groups.append(
+                    {
+                        "name": group.get("name"),
+                        "superGroup": {"id": super_group.get("id")},
+                    }
+                )
                 continue
             super_id = super_group.get("id")
             if not super_id or super_id in active_groups_by_id:
