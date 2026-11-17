@@ -154,6 +154,14 @@ TRANSLATIONS = {
         "en": "Liberation document type:",
         "sv": "Typ av ansvarsfrihetsdokument:",
     },
+    "upload.liberation_group": {
+        "en": "Committee year:",
+        "sv": "Kommittéår:",
+    },
+    "upload.select_liberation_group": {
+        "en": "Select committee year...",
+        "sv": "Välj kommittéår...",
+    },
     "upload.select_type": {"en": "Select type...", "sv": "Välj typ..."},
     "upload.choose_file": {"en": "Choose file (PDF):", "sv": "Välj fil (PDF):"},
     "upload.submit": {"en": "Upload", "sv": "Ladda upp"},
@@ -273,6 +281,14 @@ TRANSLATIONS = {
     "flash.duplicate_file": {
         "en": "This exact file has already been uploaded.",
         "sv": "Exakt samma fil har redan laddats upp.",
+    },
+    "flash.upload_limit": {
+        "en": "A {document_type} already exists for this {scope}.",
+        "sv": "Det finns redan ett dokument av typen {document_type} för denna {scope}.",
+    },
+    "flash.liberation_not_member": {
+        "en": "You are not a member of the selected committee year.",
+        "sv": "Du är inte medlem i det valda kommittéåret.",
     },
     "flash.upload_success": {
         "en": "Document uploaded successfully.",

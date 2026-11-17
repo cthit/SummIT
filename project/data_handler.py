@@ -16,6 +16,15 @@ class DuplicateDocumentError(ValueError):
     """Raised when the exact same file (name + content) is uploaded again."""
 
 
+class UploadLimitError(ValueError):
+    """Raised when a document type has reached its allowed upload count."""
+
+    def __init__(self, document_type: str, scope: str):
+        self.document_type = document_type
+        self.scope = scope
+        super().__init__(document_type, scope)
+
+
 class LP(IntEnum):
     LP1 = 1
     LP2 = 2
@@ -256,6 +265,7 @@ def upload_document(
     document_type: DocumentType,
     document_subtype: str,
     is_group: bool = False,
+    liberation_group_name: str | None = None,
 ) -> Document:
     conn = get_db()
     file_hash = hashlib.md5(the_file)
@@ -327,6 +337,47 @@ def upload_document(
                     (document_subtype,),
                 )
                 type_id = cur.fetchone()[0]
+                if document_subtype in {
+                    DivisionDocumentTypes.BUDGET.value,
+                    DivisionDocumentTypes.VERKSAMHETSPLAN.value,
+                }:
+                    cur.execute(
+                        """
+                        SELECT 1
+                        FROM DivisionDocuments dd
+                        JOIN Documents d ON d.document_id = dd.document_id
+                        JOIN DivisionDocumentTypes existing_type
+                          ON existing_type.type_id = dd.type_id
+                        JOIN StudyPeriods sp
+                          ON sp.study_period_id = dd.study_period_id
+                        WHERE d.gamma_owner_id = %s
+                          AND existing_type.type_name = %s
+                          AND sp.study_year = (
+                              SELECT study_year
+                              FROM StudyPeriods
+                              WHERE study_period_id = %s
+                          )
+                        LIMIT 1;
+                        """,
+                        (document_owner._id, document_subtype, study_period_id),
+                    )
+                    if cur.fetchone():
+                        raise UploadLimitError(document_subtype, "year")
+                else:
+                    cur.execute(
+                        """
+                        SELECT 1
+                        FROM DivisionDocuments dd
+                        JOIN Documents d ON d.document_id = dd.document_id
+                        WHERE d.gamma_owner_id = %s
+                          AND dd.type_id = %s
+                          AND dd.study_period_id = %s
+                        LIMIT 1;
+                        """,
+                        (document_owner._id, type_id, study_period_id),
+                    )
+                    if cur.fetchone():
+                        raise UploadLimitError(document_subtype, "LP")
                 cur.execute(
                     """
                     INSERT INTO DivisionDocuments (document_id, type_id, study_period_id)
@@ -348,12 +399,26 @@ def upload_document(
                     (document_subtype,),
                 )
                 type_id = cur.fetchone()[0]
+                if liberation_group_name is None:
+                    raise ValueError("Liberation group is required.")
                 cur.execute(
                     """
-                    INSERT INTO LiberationDocuments (document_id, type_id)
-                    VALUES (%s, %s);
+                    SELECT 1
+                    FROM LiberationDocuments
+                    WHERE group_name = %s AND type_id = %s
+                    LIMIT 1;
                     """,
-                    (document_id, type_id),
+                    (liberation_group_name, type_id),
+                )
+                if cur.fetchone():
+                    raise UploadLimitError(document_subtype, "committee year")
+                cur.execute(
+                    """
+                    INSERT INTO LiberationDocuments
+                        (document_id, type_id, group_name)
+                    VALUES (%s, %s, %s);
+                    """,
+                    (document_id, type_id, liberation_group_name),
                 )
 
         document = Document(
@@ -855,10 +920,13 @@ def get_missing_liberation_documents() -> list[dict]:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT d.gamma_owner_id, lt.type_name
+            SELECT d.gamma_owner_id, lr.group_name, lt.type_name
             FROM Documents d
             JOIN LiberationDocuments ld ON d.document_id = ld.document_id
             JOIN LiberationDocumentTypes lt ON ld.type_id = lt.type_id
+            JOIN LiberationRequire lr
+              ON lr.group_name = ld.group_name
+             AND lr.document_type_id = ld.type_id
             WHERE d.gamma_owner_id = ANY(%s);
             """,
             (super_ids,),
@@ -866,12 +934,12 @@ def get_missing_liberation_documents() -> list[dict]:
         uploaded = cur.fetchall()
 
     uploaded_by_owner: dict[str, set[str]] = {}
-    for owner_id, type_name in uploaded:
-        uploaded_by_owner.setdefault(owner_id, set()).add(type_name)
+    for owner_id, group_name, type_name in uploaded:
+        uploaded_by_owner.setdefault(group_name, set()).add(type_name)
 
     result = []
     for req in requires:
-        uploaded_types = uploaded_by_owner.get(req["super_group_id"], set())
+        uploaded_types = uploaded_by_owner.get(req["group_name"], set())
         missing = [t for t in req["doc_types"] if t not in uploaded_types]
         if missing:
             result.append({**req, "missing": missing})

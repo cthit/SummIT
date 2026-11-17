@@ -78,6 +78,14 @@
       <div id="division_requirement_warning" class="hidden"></div>
     </div>
     <div id="liberation_subtype" class="hidden">
+      <label>{{ t('upload.liberation_group') }}</label><br>
+      <select name="liberation_group_name">
+        <option value="">{{ t('upload.select_liberation_group') }}</option>
+        {% for group in liberation_groups %}
+        <option value="{{ group.group_name }}">{{ group.group_pretty_name }}</option>
+        {% endfor %}
+      </select>
+      <br>
       <label>{{ t('upload.liberation_subtype') }}</label><br>
       <select name="liberation_document_subtype">
         <option value="">{{ t('upload.select_type') }}</option>
@@ -189,6 +197,7 @@ function toggleDocumentSubtype() {
   const meetingSelect = document.querySelector('select[name="meeting_document_subtype"]');
   const divisionSelect = document.querySelector('select[name="division_document_subtype"]');
   const liberationSelect = document.querySelector('select[name="liberation_document_subtype"]');
+  const liberationGroupSelect = document.querySelector('select[name="liberation_group_name"]');
   
   if (meetingRadio.checked) {
     meetingSubtype.style.display = 'block';
@@ -204,6 +213,7 @@ function toggleDocumentSubtype() {
     meetingSelect.required = false;
     divisionSelect.required = true;
     liberationSelect.required = false;
+    liberationGroupSelect.required = false;
   } else if (liberationRadio.checked) {
     meetingSubtype.style.display = 'none';
     divisionSubtype.style.display = 'none';
@@ -211,6 +221,7 @@ function toggleDocumentSubtype() {
     meetingSelect.required = false;
     divisionSelect.required = false;
     liberationSelect.required = true;
+    liberationGroupSelect.required = true;
   }
   updateDivisionWarning();
 }
