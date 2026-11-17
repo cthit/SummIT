@@ -118,6 +118,8 @@ def callback():
     if "scope" not in user_info and token.get("scope"):
         user_info["scopes"] = token.get("scope")
 
+    groups_response = []
+    alumni_groups = []
     try:
         id = user_info.get("sub")
         r = requests.Session()
@@ -133,7 +135,19 @@ def callback():
         active_groups_by_id = {}
         for group in groups_response:
             super_group = group.get("superGroup", {})
+            group_data = {
+                "id": group.get("id"),
+                "name": group.get("name"),
+                "prettyName": group.get("prettyName", ""),
+                "superGroup": {
+                    "id": super_group.get("id"),
+                    "name": super_group.get("name"),
+                    "prettyName": super_group.get("prettyName", ""),
+                },
+                "post": group.get("post", {}).get("enName"),
+            }
             if super_group.get("type") == "alumni":
+                alumni_groups.append(group_data)
                 continue
             super_id = super_group.get("id")
             if not super_id or super_id in active_groups_by_id:
@@ -219,6 +233,7 @@ def callback():
         "email": user_info.get("email"),
         "cid": user_info.get("cid"),
         "groups": active_groups + extra_groups,
+        "alumni": alumni_groups,
         # "active_groups": active_groups,
         # "extra_groups": extra_groups,
     }
