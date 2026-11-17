@@ -245,6 +245,9 @@ window.addEventListener('DOMContentLoaded', function() {
       'error.file_too_large',
       max_mb=(config['MAX_CONTENT_LENGTH'] // 1000000)
     )|tojson }};
+    const replacePrompt = {{ t('upload.replace_prompt')|tojson }};
+    const uploadCheckFailedMessage = {{ t('flash.upload_check_failed')|tojson }};
+    let submitApproved = false;
 
     form.addEventListener('submit', function(event) {
       const file = fileInput.files[0];
@@ -252,7 +255,35 @@ window.addEventListener('DOMContentLoaded', function() {
         event.preventDefault();
         fileSizeError.textContent = fileTooLargeMessage;
         fileSizeError.className = 'flash flash-error';
+        return;
       }
+      if (submitApproved) return;
+
+      event.preventDefault();
+      const fields = new FormData(form);
+      fields.delete('file');
+      fetch('{{ url_for("main.upload_conflict_check") }}', {
+        method: 'POST',
+        body: new URLSearchParams(fields)
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (!result.conflict || window.confirm(replacePrompt)) {
+            if (result.conflict) {
+              const replacement = document.createElement('input');
+              replacement.type = 'hidden';
+              replacement.name = 'replace_document_id';
+              replacement.value = result.document_id;
+              form.appendChild(replacement);
+            }
+            submitApproved = true;
+            form.submit();
+          }
+        })
+        .catch(() => {
+          fileSizeError.textContent = uploadCheckFailedMessage;
+          fileSizeError.className = 'flash flash-error';
+        });
     });
   }
   

@@ -19,9 +19,10 @@ class DuplicateDocumentError(ValueError):
 class UploadLimitError(ValueError):
     """Raised when a document type has reached its allowed upload count."""
 
-    def __init__(self, document_type: str, scope: str):
+    def __init__(self, document_type: str, scope: str, document_id: int):
         self.document_type = document_type
         self.scope = scope
+        self.document_id = document_id
         super().__init__(document_type, scope)
 
 
@@ -343,7 +344,7 @@ def upload_document(
                 }:
                     cur.execute(
                         """
-                        SELECT 1
+                        SELECT d.document_id
                         FROM DivisionDocuments dd
                         JOIN Documents d ON d.document_id = dd.document_id
                         JOIN DivisionDocumentTypes existing_type
@@ -361,12 +362,13 @@ def upload_document(
                         """,
                         (document_owner._id, document_subtype, study_period_id),
                     )
-                    if cur.fetchone():
-                        raise UploadLimitError(document_subtype, "year")
+                    existing = cur.fetchone()
+                    if existing:
+                        raise UploadLimitError(document_subtype, "year", existing[0])
                 else:
                     cur.execute(
                         """
-                        SELECT 1
+                        SELECT d.document_id
                         FROM DivisionDocuments dd
                         JOIN Documents d ON d.document_id = dd.document_id
                         WHERE d.gamma_owner_id = %s
@@ -376,8 +378,9 @@ def upload_document(
                         """,
                         (document_owner._id, type_id, study_period_id),
                     )
-                    if cur.fetchone():
-                        raise UploadLimitError(document_subtype, "LP")
+                    existing = cur.fetchone()
+                    if existing:
+                        raise UploadLimitError(document_subtype, "LP", existing[0])
                 cur.execute(
                     """
                     INSERT INTO DivisionDocuments (document_id, type_id, study_period_id)
@@ -403,15 +406,19 @@ def upload_document(
                     raise ValueError("Liberation group is required.")
                 cur.execute(
                     """
-                    SELECT 1
-                    FROM LiberationDocuments
-                    WHERE group_name = %s AND type_id = %s
+                    SELECT d.document_id
+                    FROM LiberationDocuments ld
+                    JOIN Documents d ON d.document_id = ld.document_id
+                    WHERE ld.group_name = %s AND ld.type_id = %s
                     LIMIT 1;
                     """,
                     (liberation_group_name, type_id),
                 )
-                if cur.fetchone():
-                    raise UploadLimitError(document_subtype, "committee year")
+                existing = cur.fetchone()
+                if existing:
+                    raise UploadLimitError(
+                        document_subtype, "committee year", existing[0]
+                    )
                 cur.execute(
                     """
                     INSERT INTO LiberationDocuments
@@ -435,6 +442,78 @@ def upload_document(
         conn.rollback()
         raise
     return document
+
+
+def find_existing_document(
+    owner_id: str,
+    meeting_id: int | None,
+    document_type: DocumentType,
+    document_subtype: str,
+    liberation_group_name: str | None = None,
+) -> int | None:
+    """Find the document occupying the selected category slot."""
+    conn = get_db()
+    with conn.cursor() as cur:
+        if document_type == DocumentType.MEETING:
+            cur.execute(
+                """
+                SELECT d.document_id
+                FROM Documents d
+                JOIN MeetingDocuments md ON md.document_id = d.document_id
+                JOIN MeetingDocumentTypes mdt ON mdt.type_id = md.type_id
+                WHERE d.gamma_owner_id = %s AND md.meeting_id = %s
+                  AND mdt.type_name = %s;
+                """,
+                (owner_id, meeting_id, document_subtype),
+            )
+        elif document_type == DocumentType.DIVISION:
+            cur.execute(
+                """
+                SELECT d.document_id
+                FROM Documents d
+                JOIN DivisionDocuments dd ON dd.document_id = d.document_id
+                JOIN DivisionDocumentTypes ddt ON ddt.type_id = dd.type_id
+                JOIN StudyPeriods sp ON sp.study_period_id = dd.study_period_id
+                WHERE d.gamma_owner_id = %s
+                  AND ddt.type_name = %s
+                  AND (
+                    (ddt.type_name IN ('budget', 'verksamhetsplan')
+                     AND sp.study_year = (
+                       SELECT sp2.study_year
+                       FROM Meetings m2
+                       JOIN StudyPeriods sp2 ON sp2.study_period_id = m2.study_period_id
+                       WHERE m2.meeting_id = %s
+                     ))
+                    OR (ddt.type_name NOT IN ('budget', 'verksamhetsplan')
+                        AND sp.study_period_id = (
+                          SELECT study_period_id FROM Meetings WHERE meeting_id = %s
+                        ))
+                  );
+                """,
+                (
+                    owner_id,
+                    document_subtype,
+                    meeting_id,
+                    meeting_id,
+                ),
+            )
+        elif document_type == DocumentType.LIBERATION:
+            cur.execute(
+                """
+                SELECT d.document_id
+                FROM Documents d
+                JOIN LiberationDocuments ld ON ld.document_id = d.document_id
+                JOIN LiberationDocumentTypes ldt ON ldt.type_id = ld.type_id
+                WHERE d.gamma_owner_id = %s
+                  AND ld.group_name = %s
+                  AND ldt.type_name = %s;
+                """,
+                (owner_id, liberation_group_name, document_subtype),
+            )
+        else:
+            return None
+        row = cur.fetchone()
+    return row[0] if row else None
 
 
 def create_document_owner(document_owner: DocumentOwner, is_group: bool = False):
@@ -689,6 +768,98 @@ def delete_document(document_id: int, allowed_owner_ids: list[str]) -> bool:
     # must not leave a Documents row pointing at a deleted file.
     if file_path.is_file():
         file_path.unlink()
+    return True
+
+
+def replace_document(
+    document_id: int,
+    the_file: bytes,
+    file_name: str,
+    allowed_owner_ids: list[str],
+    allowed_liberation_groups: list[str] | None = None,
+    allowed_liberation_owner_ids: list[str] | None = None,
+) -> bool:
+    """Replace an owned document without changing its category metadata."""
+    conn = get_db()
+    file_hash = hashlib.md5(the_file)
+    new_file_path = UPLOAD_BASE / (f"{file_hash.hexdigest()}_{file_name}")
+    new_file_created = False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT d.file_path, ld.group_name
+                FROM Documents d
+                LEFT JOIN LiberationDocuments ld ON ld.document_id = d.document_id
+                WHERE d.document_id = %s
+                  AND (
+                      (
+                          d.gamma_owner_id = ANY(%s)
+                          AND (
+                              ld.document_id IS NULL
+                              OR ld.group_name = ANY(%s)
+                          )
+                      )
+                      OR (
+                          ld.document_id IS NOT NULL
+                          AND d.gamma_owner_id = ANY(%s)
+                          AND ld.group_name = ANY(%s)
+                      )
+                  );
+                """,
+                (
+                    document_id,
+                    allowed_owner_ids,
+                    allowed_liberation_groups or [],
+                    allowed_liberation_owner_ids or [],
+                    allowed_liberation_groups or [],
+                ),
+            )
+            row = cur.fetchone()
+            if not row:
+                return False
+
+            old_file_path = Path(row[0])
+            if new_file_path == old_file_path:
+                raise DuplicateDocumentError(
+                    "This exact file is already the current document."
+                )
+
+            cur.execute(
+                """
+                SELECT 1
+                FROM Documents
+                WHERE file_path = %s AND document_id <> %s;
+                """,
+                (str(new_file_path), document_id),
+            )
+            if cur.fetchone():
+                raise DuplicateDocumentError(
+                    "This exact file has already been uploaded."
+                )
+
+            new_file_path.parent.mkdir(parents=True, exist_ok=True)
+            new_file_path.write_bytes(the_file)
+            new_file_created = True
+
+            cur.execute(
+                """
+                UPDATE Documents
+                SET document_name = %s, file_path = %s
+                WHERE document_id = %s;
+                """,
+                (file_name, str(new_file_path), document_id),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        if new_file_created and new_file_path.is_file():
+            new_file_path.unlink()
+        raise
+
+    if old_file_path.is_file():
+        old_file_path.unlink()
     return True
 
 

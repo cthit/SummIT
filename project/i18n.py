@@ -165,6 +165,10 @@ TRANSLATIONS = {
     "upload.select_type": {"en": "Select type...", "sv": "Välj typ..."},
     "upload.choose_file": {"en": "Choose file (PDF):", "sv": "Välj fil (PDF):"},
     "upload.submit": {"en": "Upload", "sv": "Ladda upp"},
+    "upload.replace_prompt": {
+        "en": "A document already exists in this category. Replace it with this file?",
+        "sv": "Det finns redan ett dokument i denna kategori. Ersätta det med denna fil?",
+    },
     "upload.required_suffix": {"en": " (required)", "sv": " (krävs)"},
     "upload.not_required_warning": {
         "en": "This document type is not required from this group for this meeting - upload anyway if intentional.",
@@ -306,6 +310,18 @@ TRANSLATIONS = {
     "flash.document_delete_denied": {
         "en": "Document not found, or you do not have permission to delete it.",
         "sv": "Dokumentet hittades inte, eller så saknar du behörighet att ta bort det.",
+    },
+    "flash.document_replaced": {
+        "en": "Document replaced successfully.",
+        "sv": "Dokumentet har ersatts.",
+    },
+    "flash.document_replace_denied": {
+        "en": "Document not found, or you do not have permission to replace it.",
+        "sv": "Dokumentet hittades inte, eller så saknar du behörighet att ersätta det.",
+    },
+    "flash.upload_check_failed": {
+        "en": "Could not check the document category. Please try again.",
+        "sv": "Det gick inte att kontrollera dokumentkategorin. Försök igen.",
     },
     # Flash messages: mail
     "flash.mail_no_requirements": {
