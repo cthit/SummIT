@@ -85,6 +85,14 @@ class DivisionDocumentTypes(StrEnum):
     VERKSAMHETSPLAN = "verksamhetsplan"
 
 
+YEAR_SCOPED_DIVISION_TYPES = frozenset(
+    {
+        DivisionDocumentTypes.BUDGET.value,
+        DivisionDocumentTypes.VERKSAMHETSPLAN.value,
+    }
+)
+
+
 class LiberationDocumentTypes(StrEnum):
     VERKSAMETSBERATTELSE = "verksamhetsberattelse"
     EKONOMISKBERATTELSE = "ekonomiskberattelse"
@@ -338,49 +346,19 @@ def upload_document(
                     (document_subtype,),
                 )
                 type_id = cur.fetchone()[0]
-                if document_subtype in {
-                    DivisionDocumentTypes.BUDGET.value,
-                    DivisionDocumentTypes.VERKSAMHETSPLAN.value,
-                }:
-                    cur.execute(
-                        """
-                        SELECT d.document_id
-                        FROM DivisionDocuments dd
-                        JOIN Documents d ON d.document_id = dd.document_id
-                        JOIN DivisionDocumentTypes existing_type
-                          ON existing_type.type_id = dd.type_id
-                        JOIN StudyPeriods sp
-                          ON sp.study_period_id = dd.study_period_id
-                        WHERE d.gamma_owner_id = %s
-                          AND existing_type.type_name = %s
-                          AND sp.study_year = (
-                              SELECT study_year
-                              FROM StudyPeriods
-                              WHERE study_period_id = %s
-                          )
-                        LIMIT 1;
-                        """,
-                        (document_owner._id, document_subtype, study_period_id),
+                existing_id = find_existing_document(
+                    document_owner._id,
+                    meeting_id,
+                    document_type,
+                    document_subtype,
+                )
+                if existing_id:
+                    scope = (
+                        "year"
+                        if document_subtype in YEAR_SCOPED_DIVISION_TYPES
+                        else "LP"
                     )
-                    existing = cur.fetchone()
-                    if existing:
-                        raise UploadLimitError(document_subtype, "year", existing[0])
-                else:
-                    cur.execute(
-                        """
-                        SELECT d.document_id
-                        FROM DivisionDocuments dd
-                        JOIN Documents d ON d.document_id = dd.document_id
-                        WHERE d.gamma_owner_id = %s
-                          AND dd.type_id = %s
-                          AND dd.study_period_id = %s
-                        LIMIT 1;
-                        """,
-                        (document_owner._id, type_id, study_period_id),
-                    )
-                    existing = cur.fetchone()
-                    if existing:
-                        raise UploadLimitError(document_subtype, "LP", existing[0])
+                    raise UploadLimitError(document_subtype, scope, existing_id)
                 cur.execute(
                     """
                     INSERT INTO DivisionDocuments (document_id, type_id, study_period_id)
@@ -404,20 +382,16 @@ def upload_document(
                 type_id = cur.fetchone()[0]
                 if liberation_group_name is None:
                     raise ValueError("Liberation group is required.")
-                cur.execute(
-                    """
-                    SELECT d.document_id
-                    FROM LiberationDocuments ld
-                    JOIN Documents d ON d.document_id = ld.document_id
-                    WHERE ld.group_name = %s AND ld.type_id = %s
-                    LIMIT 1;
-                    """,
-                    (liberation_group_name, type_id),
+                existing_id = find_existing_document(
+                    document_owner._id,
+                    None,
+                    document_type,
+                    document_subtype,
+                    liberation_group_name,
                 )
-                existing = cur.fetchone()
-                if existing:
+                if existing_id:
                     raise UploadLimitError(
-                        document_subtype, "committee year", existing[0]
+                        document_subtype, "committee year", existing_id
                     )
                 cur.execute(
                     """
