@@ -76,6 +76,23 @@ def _meeting_label(meeting):
     return f"{meeting.date} - {lp_label}"
 
 
+def _group_ids(user):
+    return [group.get("id") for group in user.get("groups", [])]
+
+
+def _document_access(user):
+    alumni_groups = user.get("alumni", [])
+    return (
+        [user["id"]] + _group_ids(user),
+        [group.get("name") for group in alumni_groups if group.get("name")],
+        [
+            group.get("superGroup", {}).get("id")
+            for group in alumni_groups
+            if group.get("superGroup", {}).get("id")
+        ],
+    )
+
+
 def _get_groups():
     whitelist_str = os.getenv("ACTIVE_GROUPS_WHITELIST", "").strip()
     whitelist = (
@@ -199,7 +216,7 @@ def doc():
     documents_by_owner = {}
     owner_names = {user["id"]: t("doc.my_documents")}
     if selected_meeting:
-        group_ids = [g.get("id") for g in user.get("groups", [])]
+        group_ids = _group_ids(user)
         documents_by_owner = fetch_documents_for_meeting(
             selected_meeting.id, user["id"], group_ids
         )
@@ -656,18 +673,11 @@ def document_upload():
 
     try:
         if replacement_id:
-            alumni_groups = g.user.get("alumni", [])
-            allowed_owner_ids = [g.user["id"]] + [
-                group.get("id") for group in g.user.get("groups", [])
-            ]
-            allowed_liberation_owner_ids = [
-                group.get("superGroup", {}).get("id")
-                for group in alumni_groups
-                if group.get("superGroup", {}).get("id")
-            ]
-            allowed_liberation_groups = [
-                group.get("name") for group in alumni_groups if group.get("name")
-            ]
+            (
+                allowed_owner_ids,
+                allowed_liberation_groups,
+                allowed_liberation_owner_ids,
+            ) = _document_access(g.user)
             existing_id = find_existing_document(
                 actual_owner_id,
                 meeting_id if document_type != DocumentType.LIBERATION else None,
@@ -775,8 +785,7 @@ def upload_conflict_check():
 @login_required
 def download_document(document_id):
     user = g.get("user")
-    group_ids = [g.get("id") for g in user.get("groups", [])]
-    all_owner_ids = [user["id"]] + group_ids
+    all_owner_ids, _, _ = _document_access(user)
 
     doc = fetch_document_by_id(document_id, all_owner_ids)
     if not doc:
@@ -794,8 +803,7 @@ def download_document(document_id):
 @login_required
 def delete_document_view(document_id):
     user = g.get("user")
-    group_ids = [g.get("id") for g in user.get("groups", [])]
-    all_owner_ids = [user["id"]] + group_ids
+    all_owner_ids, _, _ = _document_access(user)
 
     success = delete_document(document_id, all_owner_ids)
     if success:
